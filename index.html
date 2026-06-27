@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <!-- PWA manifest -->
+  <link rel="manifest" href="./manifest.json">
+  <meta name="theme-color" content="#0369A1">
+
+  <!-- iOS Safari: フルスクリーン（SafariのUIを非表示） -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="ともたろぐ">
+
+  <!-- iOS ホーム画面アイコン -->
+  <link rel="apple-touch-icon" href="./apple-touch-icon.png">
+
+  <title>ともたろぐ</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; background: #F7F8FA; }
+    body { -webkit-text-size-adjust: 100%; }
+    input, select, textarea, button { font-family: inherit; }
+
+    /* iOS standalone: ノッチ・ホームバー対応 */
+    @supports (padding: env(safe-area-inset-top)) {
+      body {
+        padding-top: env(safe-area-inset-top);
+        padding-bottom: env(safe-area-inset-bottom);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState, useEffect, useCallback, useRef } = React;
+
+
+const fmtAmt  = (n) => n === 0 ? "" : n.toLocaleString("ja-JP");
+const fmtFull = (n) => "¥" + n.toLocaleString("ja-JP");
+
+const todayStr = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+};
+const nowISO        = () => new Date().toISOString();
+const monthKey      = (y,m) => `${y}-${String(m).padStart(2,"0")}`;
+const daysInMonth   = (y,m) => new Date(y,m,0).getDate();
+const firstDayOfWeek= (y,m) => new Date(y,m-1,1).getDay();
+const parseDate     = (s)   => { const [y,m,d]=s.split("-").map(Number); return {y,m,d}; };
+
+// ── localStorage ──────────────────────────────────────────────
+const LS = {
+  records:"tomota_records", stores:"tomota_stores", logs:"tomota_logs",
+  tagMaster:"tomota_tagMaster", payMethods:"tomota_payMethods",
+  settings:"tomota_settings", holidays:"tomota_holidays",
+};
+const lsGet = (k,fb) => { try{ const v=localStorage.getItem(k); return v!==null?JSON.parse(v):fb; }catch{return fb;} };
+const lsSet = (k,v)  => { try{ localStorage.setItem(k,JSON.stringify(v)); }catch{} };
+
+const APP_NAME    = "ともたろぐ";
+const DATA_VERSION = "1.12";
+
+// ── 祝日データ 2010-2030 ──────────────────────────────────────
+const BUILTIN_HOLIDAYS = {
+  "2010-01-01":"元日","2010-01-11":"成人の日","2010-02-11":"建国記念の日","2010-03-21":"春分の日","2010-03-22":"振替休日","2010-04-29":"昭和の日","2010-05-03":"憲法記念日","2010-05-04":"みどりの日","2010-05-05":"こどもの日","2010-07-19":"海の日","2010-09-20":"敬老の日","2010-09-23":"秋分の日","2010-10-11":"体育の日","2010-11-03":"文化の日","2010-11-23":"勤労感謝の日","2010-12-23":"天皇誕生日",
+  "2011-01-01":"元日","2011-01-10":"成人の日","2011-02-11":"建国記念の日","2011-03-21":"春分の日","2011-04-29":"昭和の日","2011-05-03":"憲法記念日","2011-05-04":"みどりの日","2011-05-05":"こどもの日","2011-07-18":"海の日","2011-09-19":"敬老の日","2011-09-23":"秋分の日","2011-10-10":"体育の日","2011-11-03":"文化の日","2011-11-23":"勤労感謝の日","2011-12-23":"天皇誕生日",
+  "2012-01-01":"元日","2012-01-02":"振替休日","2012-01-09":"成人の日","2012-02-11":"建国記念の日","2012-03-20":"春分の日","2012-04-29":"昭和の日","2012-04-30":"振替休日","2012-05-03":"憲法記念日","2012-05-04":"みどりの日","2012-05-05":"こどもの日","2012-07-16":"海の日","2012-09-17":"敬老の日","2012-09-22":"秋分の日","2012-10-08":"体育の日","2012-11-03":"文化の日","2012-11-23":"勤労感謝の日","2012-12-23":"天皇誕生日","2012-12-24":"振替休日",
+  "2013-01-01":"元日","2013-01-14":"成人の日","2013-02-11":"建国記念の日","2013-03-20":"春分の日","2013-04-29":"昭和の日","2013-05-03":"憲法記念日","2013-05-04":"みどりの日","2013-05-05":"こどもの日","2013-05-06":"振替休日","2013-07-15":"海の日","2013-09-16":"敬老の日","2013-09-23":"秋分の日","2013-10-14":"体育の日","2013-11-03":"文化の日","2013-11-04":"振替休日","2013-11-23":"勤労感謝の日","2013-12-23":"天皇誕生日",
+  "2014-01-01":"元日","2014-01-13":"成人の日","2014-02-11":"建国記念の日","2014-03-21":"春分の日","2014-04-29":"昭和の日","2014-05-03":"憲法記念日","2014-05-04":"みどりの日","2014-05-05":"こどもの日","2014-05-06":"振替休日","2014-07-21":"海の日","2014-09-15":"敬老の日","2014-09-23":"秋分の日","2014-10-13":"体育の日","2014-11-03":"文化の日","2014-11-23":"勤労感謝の日","2014-11-24":"振替休日","2014-12-23":"天皇誕生日",
+  "2015-01-01":"元日","2015-01-12":"成人の日","2015-02-11":"建国記念の日","2015-03-21":"春分の日","2015-03-22":"振替休日","2015-04-29":"昭和の日","2015-05-03":"憲法記念日","2015-05-04":"みどりの日","2015-05-05":"こどもの日","2015-05-06":"振替休日","2015-07-20":"海の日","2015-09-21":"敬老の日","2015-09-22":"国民の休日","2015-09-23":"秋分の日","2015-10-12":"体育の日","2015-11-03":"文化の日","2015-11-23":"勤労感謝の日","2015-12-23":"天皇誕生日",
+  "2016-01-01":"元日","2016-01-11":"成人の日","2016-02-11":"建国記念の日","2016-03-20":"春分の日","2016-03-21":"振替休日","2016-04-29":"昭和の日","2016-05-03":"憲法記念日","2016-05-04":"みどりの日","2016-05-05":"こどもの日","2016-07-18":"海の日","2016-08-11":"山の日","2016-09-19":"敬老の日","2016-09-22":"国民の休日","2016-09-23":"秋分の日","2016-10-10":"体育の日","2016-11-03":"文化の日","2016-11-23":"勤労感謝の日","2016-12-23":"天皇誕生日",
+  "2017-01-01":"元日","2017-01-02":"振替休日","2017-01-09":"成人の日","2017-02-11":"建国記念の日","2017-03-20":"春分の日","2017-04-29":"昭和の日","2017-05-03":"憲法記念日","2017-05-04":"みどりの日","2017-05-05":"こどもの日","2017-07-17":"海の日","2017-08-11":"山の日","2017-09-18":"敬老の日","2017-09-23":"秋分の日","2017-10-09":"体育の日","2017-11-03":"文化の日","2017-11-23":"勤労感謝の日","2017-12-23":"天皇誕生日",
+  "2018-01-01":"元日","2018-01-08":"成人の日","2018-02-11":"建国記念の日","2018-02-12":"振替休日","2018-03-21":"春分の日","2018-04-29":"昭和の日","2018-04-30":"振替休日","2018-05-03":"憲法記念日","2018-05-04":"みどりの日","2018-05-05":"こどもの日","2018-07-16":"海の日","2018-08-11":"山の日","2018-09-17":"敬老の日","2018-09-23":"秋分の日","2018-09-24":"振替休日","2018-10-08":"体育の日","2018-11-03":"文化の日","2018-11-23":"勤労感謝の日","2018-12-23":"天皇誕生日","2018-12-24":"振替休日",
+  "2019-01-01":"元日","2019-01-14":"成人の日","2019-02-11":"建国記念の日","2019-03-21":"春分の日","2019-04-29":"昭和の日","2019-04-30":"国民の休日","2019-05-01":"天皇即位の日","2019-05-02":"国民の休日","2019-05-03":"憲法記念日","2019-05-04":"みどりの日","2019-05-05":"こどもの日","2019-05-06":"振替休日","2019-07-15":"海の日","2019-08-11":"山の日","2019-08-12":"振替休日","2019-09-16":"敬老の日","2019-09-23":"秋分の日","2019-10-14":"体育の日","2019-10-22":"即位礼正殿の儀","2019-11-03":"文化の日","2019-11-04":"振替休日","2019-11-23":"勤労感謝の日",
+  "2020-01-01":"元日","2020-01-13":"成人の日","2020-02-11":"建国記念の日","2020-02-23":"天皇誕生日","2020-02-24":"振替休日","2020-03-20":"春分の日","2020-04-29":"昭和の日","2020-05-03":"憲法記念日","2020-05-04":"みどりの日","2020-05-05":"こどもの日","2020-05-06":"振替休日","2020-07-23":"海の日","2020-07-24":"スポーツの日","2020-08-10":"山の日","2020-09-21":"敬老の日","2020-09-22":"秋分の日","2020-11-03":"文化の日","2020-11-23":"勤労感謝の日",
+  "2021-01-01":"元日","2021-01-11":"成人の日","2021-02-11":"建国記念の日","2021-02-23":"天皇誕生日","2021-03-20":"春分の日","2021-04-29":"昭和の日","2021-05-03":"憲法記念日","2021-05-04":"みどりの日","2021-05-05":"こどもの日","2021-07-22":"海の日","2021-07-23":"スポーツの日","2021-08-08":"山の日","2021-08-09":"振替休日","2021-09-20":"敬老の日","2021-09-23":"秋分の日","2021-11-03":"文化の日","2021-11-23":"勤労感謝の日",
+  "2022-01-01":"元日","2022-01-10":"成人の日","2022-02-11":"建国記念の日","2022-02-23":"天皇誕生日","2022-03-21":"春分の日","2022-04-29":"昭和の日","2022-05-03":"憲法記念日","2022-05-04":"みどりの日","2022-05-05":"こどもの日","2022-07-18":"海の日","2022-08-11":"山の日","2022-09-19":"敬老の日","2022-09-23":"秋分の日","2022-10-10":"スポーツの日","2022-11-03":"文化の日","2022-11-23":"勤労感謝の日",
+  "2023-01-01":"元日","2023-01-02":"振替休日","2023-01-09":"成人の日","2023-02-11":"建国記念の日","2023-02-23":"天皇誕生日","2023-03-21":"春分の日","2023-04-29":"昭和の日","2023-05-03":"憲法記念日","2023-05-04":"みどりの日","2023-05-05":"こどもの日","2023-07-17":"海の日","2023-08-11":"山の日","2023-09-18":"敬老の日","2023-09-23":"秋分の日","2023-10-09":"スポーツの日","2023-11-03":"文化の日","2023-11-23":"勤労感謝の日",
+  "2024-01-01":"元日","2024-01-08":"成人の日","2024-02-11":"建国記念の日","2024-02-12":"振替休日","2024-02-23":"天皇誕生日","2024-03-20":"春分の日","2024-04-29":"昭和の日","2024-05-03":"憲法記念日","2024-05-04":"みどりの日","2024-05-05":"こどもの日","2024-05-06":"振替休日","2024-07-15":"海の日","2024-08-11":"山の日","2024-08-12":"振替休日","2024-09-16":"敬老の日","2024-09-22":"国民の休日","2024-09-23":"秋分の日","2024-10-14":"スポーツの日","2024-11-03":"文化の日","2024-11-04":"振替休日","2024-11-23":"勤労感謝の日",
+  "2025-01-01":"元日","2025-01-13":"成人の日","2025-02-11":"建国記念の日","2025-02-23":"天皇誕生日","2025-02-24":"振替休日","2025-03-20":"春分の日","2025-04-29":"昭和の日","2025-05-03":"憲法記念日","2025-05-04":"みどりの日","2025-05-05":"こどもの日","2025-05-06":"振替休日","2025-07-21":"海の日","2025-08-11":"山の日","2025-09-15":"敬老の日","2025-09-23":"秋分の日","2025-10-13":"スポーツの日","2025-11-03":"文化の日","2025-11-23":"勤労感謝の日","2025-11-24":"振替休日",
+  "2026-01-01":"元日","2026-01-12":"成人の日","2026-02-11":"建国記念の日","2026-02-23":"天皇誕生日","2026-03-20":"春分の日","2026-04-29":"昭和の日","2026-05-03":"憲法記念日","2026-05-04":"みどりの日","2026-05-05":"こどもの日","2026-05-06":"振替休日","2026-07-20":"海の日","2026-08-11":"山の日","2026-09-21":"敬老の日","2026-09-22":"国民の休日","2026-09-23":"秋分の日","2026-10-12":"スポーツの日","2026-11-03":"文化の日","2026-11-23":"勤労感謝の日",
+  "2027-01-01":"元日","2027-01-11":"成人の日","2027-02-11":"建国記念の日","2027-02-23":"天皇誕生日","2027-03-21":"春分の日","2027-03-22":"振替休日","2027-04-29":"昭和の日","2027-05-03":"憲法記念日","2027-05-04":"みどりの日","2027-05-05":"こどもの日","2027-07-19":"海の日","2027-08-11":"山の日","2027-09-20":"敬老の日","2027-09-23":"秋分の日","2027-10-11":"スポーツの日","2027-11-03":"文化の日","2027-11-23":"勤労感謝の日",
+  "2028-01-01":"元日","2028-01-10":"成人の日","2028-02-11":"建国記念の日","2028-02-23":"天皇誕生日","2028-03-20":"春分の日","2028-04-29":"昭和の日","2028-05-03":"憲法記念日","2028-05-04":"みどりの日","2028-05-05":"こどもの日","2028-07-17":"海の日","2028-08-11":"山の日","2028-09-18":"敬老の日","2028-09-22":"秋分の日","2028-10-09":"スポーツの日","2028-11-03":"文化の日","2028-11-23":"勤労感謝の日",
+  "2029-01-01":"元日","2029-01-08":"成人の日","2029-02-11":"建国記念の日","2029-02-12":"振替休日","2029-02-23":"天皇誕生日","2029-03-20":"春分の日","2029-04-29":"昭和の日","2029-04-30":"振替休日","2029-05-03":"憲法記念日","2029-05-04":"みどりの日","2029-05-05":"こどもの日","2029-07-16":"海の日","2029-08-11":"山の日","2029-08-13":"振替休日","2029-09-17":"敬老の日","2029-09-23":"秋分の日","2029-10-08":"スポーツの日","2029-11-03":"文化の日","2029-11-05":"振替休日","2029-11-23":"勤労感謝の日",
+  "2030-01-01":"元日","2030-01-14":"成人の日","2030-02-11":"建国記念の日","2030-02-23":"天皇誕生日","2030-03-20":"春分の日","2030-04-29":"昭和の日","2030-05-03":"憲法記念日","2030-05-04":"みどりの日","2030-05-05":"こどもの日","2030-05-06":"振替休日","2030-07-15":"海の日","2030-08-11":"山の日","2030-08-12":"振替休日","2030-09-16":"敬老の日","2030-09-23":"秋分の日","2030-10-14":"スポーツの日","2030-11-03":"文化の日","2030-11-04":"振替休日","2030-11-23":"勤労感謝の日",
+};
+
+const buildHolidayMap = (custom) => ({ ...BUILTIN_HOLIDAYS, ...custom });
+
+// ── サンプルデータ ────────────────────────────────────────────
+const TODAY = todayStr();
+const { y:ty, m:tm } = parseDate(TODAY);
+const mp = (d) => `${ty}-${String(tm).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+
+const DEFAULT_STORES = [
+  { id:"s1", group:"ローソン",     branch:"上野店",     closed:false },
+  { id:"s2", group:"ローソン",     branch:"御徒町店",   closed:false },
+  { id:"s3", group:"マクドナルド", branch:"上野駅前店", closed:false },
+  { id:"s4", group:"スギ薬局",     branch:"上野店",     closed:false },
+  { id:"s5", group:"上野動物園",   branch:"",           closed:false },
+];
+const DEFAULT_RECORDS = [
+  { id:"r1", purchaseDate:mp(3),  payDate:mp(25), storeId:"s1", payMethodId:"pm1", items:[{name:"おにぎり 梅",price:148},{name:"お茶 500ml",price:120}], tags:["#食費"], memo:"", source:"manual", receiptImageIds:[] },
+  { id:"r2", purchaseDate:mp(3),  payDate:mp(25), storeId:"s3", payMethodId:"pm1", items:[{name:"昼食セット",price:850}], tags:["#食費"], memo:"", source:"manual", receiptImageIds:[] },
+  { id:"r3", purchaseDate:mp(10), payDate:mp(25), storeId:"s4", payMethodId:"pm1", items:[{name:"風邪薬",price:1280}], tags:["#医療費","#要確認"], memo:"レシート要確認", source:"manual", receiptImageIds:[] },
+  { id:"r4", purchaseDate:mp(15), payDate:mp(25), storeId:"s5", payMethodId:"pm1", items:[{name:"入園料",price:600}], tags:["#レジャー"], memo:"家族で訪問", source:"manual", receiptImageIds:[] },
+  { id:"r5", purchaseDate:mp(15), payDate:mp(25), storeId:"s1", payMethodId:"pm1", items:[{name:"からあげくん",price:248},{name:"コーヒー",price:158}], tags:["#食費"], memo:"", source:"manual", receiptImageIds:[] },
+];
+const DEFAULT_LOGS = { [mp(15)]:"動物園に家族で行った。パンダが可愛かった🐼" };
+const DEFAULT_TAG_MASTER = [
+  { name:"#食費",     role:"category", excludeFromTotal:false, calendarDot:false, calendarDotColor:"#2980B9" },
+  { name:"#医療費",   role:"medical",  excludeFromTotal:false, calendarDot:false, calendarDotColor:"#8E44AD" },
+  { name:"#交通費",   role:"category", excludeFromTotal:false, calendarDot:false, calendarDotColor:"#2980B9" },
+  { name:"#レジャー", role:"category", excludeFromTotal:false, calendarDot:false, calendarDotColor:"#27AE60" },
+  { name:"#日用品",   role:"category", excludeFromTotal:false, calendarDot:false, calendarDotColor:"#2980B9" },
+  { name:"#要確認",   role:"flag",     excludeFromTotal:false, calendarDot:true,  calendarDotColor:"#E74C3C" },
+  { name:"#父",       role:"person",   excludeFromTotal:false, calendarDot:false, calendarDotColor:"#2980B9" },
+  { name:"#母",       role:"person",   excludeFromTotal:false, calendarDot:false, calendarDotColor:"#2980B9" },
+  { name:"#立替",     role:"exclude",  excludeFromTotal:true,  calendarDot:false, calendarDotColor:"#999" },
+];
+const DEFAULT_PAY_METHODS = [
+  { id:"pm1", name:"現金",       type:"cash",   active:true },
+  { id:"pm2", name:"Suica",      type:"ic",     active:true },
+  { id:"pm3", name:"楽天カード", type:"credit", active:true },
+];
+const DEFAULT_SETTINGS = { calendarWatchTag:"#要確認", version:DATA_VERSION };
+const DEFAULT_HOLIDAYS  = {};
+
+// ── ヘルパー ──────────────────────────────────────────────────
+const storeName   = (id,stores) => { const s=stores.find(x=>x.id===id); return s ? (s.branch?`${s.group} ${s.branch}`:s.group) : "不明"; };
+const recordTotal = (r) => r.items.reduce((a,b)=>a+b.price,0);
+
+// ── エクスポート / インポート ──────────────────────────────────
+const buildExport = (d) => ({ version:DATA_VERSION, exportedAt:nowISO(), appName:APP_NAME, ...d });
+function exportJSON(data) {
+  const blob = new Blob([JSON.stringify(buildExport(data),null,2)],{type:"application/json"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `tomota_backup_${new Date().toISOString().slice(0,10).replace(/-/g,"")}.json`;
+  a.click();
+}
+function importJSON(file, onOk, onErr) {
+  const r = new FileReader();
+  r.onload = (e) => {
+    try {
+      const d = JSON.parse(e.target.result);
+      if (!d.version) throw new Error("versionフィールドがありません");
+      if (!d.records||!d.stores) throw new Error("必須データが見つかりません");
+      onOk(d);
+    } catch(err) { onErr(err.message); }
+  };
+  r.readAsText(file);
+}
+
+// ── スタイル ──────────────────────────────────────────────────
+const S = {
+  app:{ fontFamily:"'Hiragino Kaku Gothic ProN','Hiragino Sans',Meiryo,'Noto Sans JP',sans-serif", background:"#F7F8FA", minHeight:"100vh", maxWidth:430, margin:"0 auto", position:"relative", color:"#1E293B", paddingBottom:90 },
+  nav:{ position:"fixed", bottom:12, left:"50%", transform:"translateX(-50%)", width:"calc(100% - 24px)", maxWidth:406, background:"#fff", borderRadius:22, border:"1px solid #E8EDF2", display:"flex", zIndex:100, boxShadow:"0 4px 18px rgba(3,105,161,0.18), 0 1px 4px rgba(0,0,0,0.08)" },
+  navItem:(a)=>({ flex:1, display:"flex", flexDirection:"column", alignItems:"center", padding:"10px 4px 10px", fontSize:10, color:a?"#0369A1":"#94A3B8", fontWeight:a?700:500, cursor:"pointer", background:"none", border:"none", gap:2 }),
+  navIcon:{ fontSize:20 },
+  header:{ background:"#fff", borderBottom:"1px solid #E8EDF2", padding:"8px 16px 7px", position:"sticky", top:0, zIndex:50 },
+  headerRow:{ display:"flex", alignItems:"center", justifyContent:"space-between" },
+  title:{ fontSize:16, fontWeight:700, letterSpacing:0.3, color:"#1E293B" },
+  statusBar:{ background:"#fff", padding:"4px 16px", display:"flex", gap:10, fontSize:13, alignItems:"center", fontWeight:600, borderBottom:"1px solid #E8EDF2" },
+  tabs:{ display:"flex", background:"#F7F8FA", padding:"0 16px", borderBottom:"1px solid #E8EDF2" },
+  tab:(a)=>({ padding:"5px 18px", fontSize:13, fontWeight:a?700:400, color:a?"#0369A1":"#94A3B8", borderBottom:a?"2px solid #0369A1":"2px solid transparent", cursor:"pointer", background:"none", border:"none" }),
+  calHeader:{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"5px 12px 3px" },
+  calMonth:{ fontSize:15, fontWeight:600, color:"#1E293B" },
+  calNavBtn:{ background:"none", border:"1px solid #E2E8F0", borderRadius:7, padding:"3px 10px", fontSize:13, cursor:"pointer", color:"#64748B" },
+  todayBtn:{ background:"#0369A1", color:"#fff", border:"none", borderRadius:7, padding:"3px 10px", fontSize:12, cursor:"pointer", fontWeight:600 },
+  weekRow:{ display:"grid", gridTemplateColumns:"repeat(7,1fr)", background:"#F7F8FA", padding:"2px 6px 1px" },
+  weekDay:(i)=>({ textAlign:"center", fontSize:10, fontWeight:500, color:i===0?"#E57373":i===6?"#7EB3E8":"#C0C8D2", padding:"2px 0" }),
+  calGrid:{ display:"grid", gridTemplateColumns:"repeat(7,minmax(0,1fr))", padding:"2px 6px 10px", gap:2, background:"#E0E3E8" },
+  calCell:(isToday)=>({ height:54, borderRadius:6, padding:"5px 4px 4px", background:isToday?"#EFF9FF":"#FFFFFF", border:isToday?"1.5px solid #BAE6FD":"none", cursor:"pointer", position:"relative", display:"flex", flexDirection:"column", justifyContent:"flex-start", alignItems:"flex-start", gap:3, overflow:"visible", boxSizing:"border-box", boxShadow:"0 1px 3px rgba(0,0,0,0.07)" }),
+  cellDate:(isToday,dow,isHoli)=>({ fontSize:16, fontWeight:isToday?600:400, lineHeight:1, color:isToday?"#0369A1":isHoli?"#E57373":dow===0?"#E57373":dow===6?"#7EB3E8":"#64748B" }),
+  cellAmt:{ fontSize:11, color:"#0F172A", fontWeight:800, lineHeight:1.1, whiteSpace:"nowrap", display:"block", width:"100%", overflow:"visible" },
+  cellDot:(c)=>({ width:5, height:5, borderRadius:"50%", background:c||"#E74C3C", position:"absolute", top:3, right:3 }),
+  dateHeader:{ display:"flex", alignItems:"center", padding:"12px 16px", gap:8, borderBottom:"1px solid #E8E4DC", background:"#fff" },
+  backBtn:{ background:"none", border:"none", fontSize:20, cursor:"pointer", padding:0, color:"#0369A1" },
+  dateTitle:{ fontSize:17, fontWeight:700 },
+  section:{ padding:"14px 16px 0" },
+  sectionTitle:{ fontSize:11, fontWeight:700, color:"#0369A1", letterSpacing:1.5, marginBottom:8, display:"flex", alignItems:"center", gap:6 },
+  logBox:{ background:"#F5FDFD", border:"1px solid #E8E4DC", borderRadius:10, padding:"10px 12px", fontSize:14, lineHeight:1.7, color:"#555", minHeight:60, cursor:"pointer" },
+  logInput:{ width:"100%", background:"#F5FDFD", border:"1px solid #0ABAB5", borderRadius:10, padding:"10px 12px", fontSize:14, lineHeight:1.7, color:"#2C2C2C", minHeight:80, boxSizing:"border-box", outline:"none", fontFamily:"'Hiragino Kaku Gothic ProN','Hiragino Sans',Meiryo,sans-serif", resize:"none" },
+  receiptCard:{ background:"#fff", border:"1px solid #EEE9DF", borderRadius:10, padding:"10px 12px", marginBottom:8, cursor:"pointer" },
+  receiptStore:{ fontSize:13, fontWeight:700, marginBottom:4 },
+  receiptItem:{ display:"flex", justifyContent:"space-between", fontSize:13, color:"#555", padding:"2px 0" },
+  receiptPrice:{ fontWeight:600, color:"#2C2C2C" },
+  receiptTags:{ display:"flex", flexWrap:"wrap", gap:4, marginTop:6 },
+  tag:(role)=>({ fontSize:11, padding:"2px 8px", borderRadius:99, fontWeight:600, background:role==="flag"?"#FFE4E1":role==="medical"?"#F0E6FF":role==="exclude"?"#F5F5F5":"#EBF5FB", color:role==="flag"?"#C0392B":role==="medical"?"#8E44AD":role==="exclude"?"#999":"#0369A1" }),
+  fab:{ position:"fixed", bottom:88, right:"calc(50% - 215px + 16px)", width:52, height:52, borderRadius:"50%", background:"#0369A1", color:"#fff", fontSize:26, border:"none", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 4px 16px rgba(3,105,161,0.45)", zIndex:90 },
+  overlay:{ position:"fixed", inset:0, background:"rgba(0,0,0,0.45)", zIndex:200, display:"flex", alignItems:"flex-end" },
+  sheet:{ background:"#F8FCFF", width:"100%", maxWidth:430, margin:"0 auto", borderRadius:"16px 16px 0 0", padding:"20px 16px 32px", maxHeight:"90vh", overflowY:"auto" },
+  sheetTitle:{ fontSize:16, fontWeight:700, marginBottom:16 },
+  label:{ fontSize:12, color:"#888", marginBottom:4, marginTop:12 },
+  input:{ width:"100%", border:"1px solid #DDD8CF", borderRadius:8, padding:"10px 12px", fontSize:15, boxSizing:"border-box", background:"#fff", outline:"none", fontFamily:"'Hiragino Kaku Gothic ProN','Hiragino Sans',Meiryo,sans-serif" },
+  select:{ width:"100%", border:"1px solid #DDD8CF", borderRadius:8, padding:"10px 12px", fontSize:15, boxSizing:"border-box", background:"#fff", outline:"none" },
+  tagGrid:{ display:"flex", flexWrap:"wrap", gap:6, marginTop:4 },
+  tagChip:(sel,role)=>({ padding:"5px 12px", borderRadius:99, fontSize:13, cursor:"pointer", background:sel?(role==="flag"?"#C0392B":role==="medical"?"#8E44AD":role==="exclude"?"#777":"#0369A1"):"#F1F5F9", color:sel?"#fff":"#666", border:"none", fontWeight:sel?700:400 }),
+  saveBtn:{ width:"100%", background:"#0369A1", color:"#fff", border:"none", borderRadius:10, padding:"14px", fontSize:15, fontWeight:700, cursor:"pointer", marginTop:20 },
+  deleteBtn:{ width:"100%", background:"#fff", color:"#E74C3C", border:"1px solid #E74C3C", borderRadius:10, padding:"12px", fontSize:14, cursor:"pointer", marginTop:8 },
+  searchInput:{ width:"100%", border:"1.5px solid #0ABAB5", borderRadius:10, padding:"12px 14px", fontSize:15, boxSizing:"border-box", background:"#fff", outline:"none", fontFamily:"'Hiragino Kaku Gothic ProN','Hiragino Sans',Meiryo,sans-serif" },
+  searchResult:{ background:"#fff", border:"1px solid #EEE9DF", borderRadius:10, padding:"10px 14px", marginBottom:8, cursor:"pointer" },
+  tagSection:{ padding:"10px 12px" },
+  tagRow:{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"10px 0", borderBottom:"1px solid #F0EBE0", cursor:"pointer" },
+  tagName:{ fontSize:14, fontWeight:700 },
+  tagCount:{ fontSize:13, color:"#888" },
+  settingRow:{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"13px 14px", borderBottom:"1px solid #F3F4F6", background:"#fff" },
+  settingLabel:{ fontSize:14 },
+  settingValue:{ fontSize:13, color:"#888" },
+  sectionHead:{ padding:"14px 12px 4px", fontSize:11, color:"#94A3B8", letterSpacing:1, fontWeight:600 },
+  actionBtn:(c)=>({ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"13px 16px", borderBottom:"1px solid #F0EBE0", background:"#fff", cursor:"pointer", border:"none", width:"100%", fontSize:14, color:c||"#2C2C2C", fontFamily:"'Hiragino Kaku Gothic ProN','Hiragino Sans',Meiryo,sans-serif" }),
+  toast:{ position:"fixed", bottom:100, left:"50%", transform:"translateX(-50%)", background:"#2C2C2C", color:"#fff", padding:"10px 20px", borderRadius:99, fontSize:13, zIndex:999, whiteSpace:"nowrap" },
+};
+
+// ══════════════════════════════════════════════════════════════
+// メインアプリ
+// ══════════════════════════════════════════════════════════════
+function TomotaKakeibo() {
+  const [records,    setRecords]    = useState(()=>lsGet(LS.records,    DEFAULT_RECORDS));
+  const [stores,     setStores]     = useState(()=>lsGet(LS.stores,     DEFAULT_STORES));
+  const [logs,       setLogs]       = useState(()=>lsGet(LS.logs,       DEFAULT_LOGS));
+  const [tagMaster,  setTagMaster]  = useState(()=>lsGet(LS.tagMaster,  DEFAULT_TAG_MASTER));
+  const [payMethods, setPayMethods] = useState(()=>lsGet(LS.payMethods, DEFAULT_PAY_METHODS));
+  const [settings,   setSettings]   = useState(()=>lsGet(LS.settings,   DEFAULT_SETTINGS));
+  const [holidays,   setHolidays]   = useState(()=>lsGet(LS.holidays,   DEFAULT_HOLIDAYS));
+  const [tab,          setTab]          = useState("calendar");
+  const [calTab,       setCalTab]       = useState("purchase");
+  const [viewYear,     setViewYear]     = useState(()=>new Date().getFullYear());
+  const [viewMonth,    setViewMonth]    = useState(()=>new Date().getMonth()+1);
+  const [selectedDate, setSelectedDate] = useState(null);
+  const [showForm,     setShowForm]     = useState(false);
+  const [editRecord,   setEditRecord]   = useState(null);
+  const [searchQ,      setSearchQ]      = useState("");
+  const [toast,        setToast]        = useState(null);
+
+  useEffect(()=>{ lsSet(LS.records,    records);    },[records]);
+  useEffect(()=>{ lsSet(LS.stores,     stores);     },[stores]);
+  useEffect(()=>{ lsSet(LS.logs,       logs);       },[logs]);
+  useEffect(()=>{ lsSet(LS.tagMaster,  tagMaster);  },[tagMaster]);
+  useEffect(()=>{ lsSet(LS.payMethods, payMethods); },[payMethods]);
+  useEffect(()=>{ lsSet(LS.settings,   settings);   },[settings]);
+  useEffect(()=>{ lsSet(LS.holidays,   holidays);   },[holidays]);
+
+  const showToast = (msg) => { setToast(msg); setTimeout(()=>setToast(null),2200); };
+  const holidayMap = buildHolidayMap(holidays);
+  const excludeTags = tagMaster.filter(t=>t.excludeFromTotal).map(t=>t.name);
+
+  const dailyTotal = useCallback((year,month) => {
+    const map={}, mStr=monthKey(year,month);
+    records.forEach(r=>{
+      if (r.tags.some(t=>excludeTags.includes(t))) return;
+      const ds = calTab==="purchase"?r.purchaseDate:r.payDate;
+      if (ds.startsWith(mStr)) map[ds]=(map[ds]||0)+recordTotal(r);
+    });
+    return map;
+  },[records,calTab,excludeTags.join(",")]);
+
+  const dotTagMaster = tagMaster.filter(t=>t.calendarDot);
+  const dotDays = useCallback((year,month) => {
+    const map={}, mStr=monthKey(year,month);
+    records.forEach(r=>{
+      dotTagMaster.forEach(dt=>{
+        if (r.tags.includes(dt.name)) {
+          const ds=calTab==="purchase"?r.purchaseDate:r.payDate;
+          if (ds.startsWith(mStr)) map[ds]=dt.calendarDotColor||"#E74C3C";
+        }
+      });
+    });
+    return map;
+  },[records,calTab,dotTagMaster]);
+
+  const warnTag   = settings.calendarWatchTag||"#要確認";
+  const warnCount = records.filter(r=>r.tags.includes(warnTag)).length;
+  const goToday   = () => { const n=new Date(); setViewYear(n.getFullYear()); setViewMonth(n.getMonth()+1); };
+
+  const saveRecord = (rec) => {
+    if (rec.id) setRecords(prev=>prev.map(r=>r.id===rec.id?rec:r));
+    else setRecords(prev=>[...prev,{...rec,id:"r"+Date.now()}]);
+    setShowForm(false); setEditRecord(null); showToast("保存しました");
+  };
+  const deleteRecord = (id) => {
+    setRecords(prev=>prev.filter(r=>r.id!==id));
+    setShowForm(false); setEditRecord(null); showToast("削除しました");
+  };
+
+  const dateRecords   = selectedDate ? records.filter(r=>(calTab==="purchase"?r.purchaseDate:r.payDate)===selectedDate) : [];
+  const searchResults = searchQ.trim() ? records.filter(r=>{
+    const q=searchQ.toLowerCase();
+    return storeName(r.storeId,stores).toLowerCase().includes(q)
+      || r.items.map(i=>i.name.toLowerCase()).join(" ").includes(q)
+      || r.tags.join(" ").toLowerCase().includes(q);
+  }) : [];
+  const tagStats = {};
+  records.forEach(r=>r.tags.forEach(t=>{tagStats[t]=(tagStats[t]||0)+1;}));
+
+  const handleExport = () => { exportJSON({records,stores,logs,tagMaster,payMethods,settings,holidays}); showToast("エクスポートしました"); };
+  const handleImport = (data) => {
+    if (data.records)    setRecords(data.records);
+    if (data.stores)     setStores(data.stores);
+    if (data.logs)       setLogs(data.logs);
+    if (data.tagMaster)  setTagMaster(data.tagMaster);
+    if (data.payMethods) setPayMethods(data.payMethods);
+    if (data.settings)   setSettings(data.settings);
+    if (data.holidays)   setHolidays(data.holidays);
+    showToast(`復元完了 (ver ${data.version}) — ${data.records?.length||0}件`);
+  };
+
+  return (
+    <div style={S.app}>
+      {tab==="calendar"&&!selectedDate&&(
+        <CalendarView year={viewYear} month={viewMonth} calTab={calTab} setCalTab={setCalTab}
+          dailyTotal={dailyTotal(viewYear,viewMonth)} dotDays={dotDays(viewYear,viewMonth)}
+          warnCount={warnCount} warnTag={warnTag} holidayMap={holidayMap}
+          onPrev={()=>{if(viewMonth===1){setViewYear(y=>y-1);setViewMonth(12);}else setViewMonth(m=>m-1);}}
+          onNext={()=>{if(viewMonth===12){setViewYear(y=>y+1);setViewMonth(1);}else setViewMonth(m=>m+1);}}
+          onGoToday={goToday} onSelectDate={d=>setSelectedDate(d)}/>
+      )}
+      {tab==="calendar"&&selectedDate&&(
+        <DateView date={selectedDate} records={dateRecords} log={logs[selectedDate]||""}
+          stores={stores} tagMaster={tagMaster} holidayMap={holidayMap}
+          onBack={()=>setSelectedDate(null)}
+          onEditRecord={r=>{setEditRecord(r);setShowForm(true);}}
+          onNewRecord={()=>{setEditRecord({purchaseDate:selectedDate,payDate:selectedDate});setShowForm(true);}}
+          onSaveLog={text=>setLogs(prev=>({...prev,[selectedDate]:text}))}/>
+      )}
+      {tab==="search"&&<SearchView q={searchQ} setQ={setSearchQ} results={searchResults} stores={stores} tagMaster={tagMaster} onEdit={r=>{setEditRecord(r);setShowForm(true);}}/>}
+      {tab==="tags"&&<TagsView tagStats={tagStats} tagMaster={tagMaster} setTagMaster={setTagMaster} records={records} stores={stores} onEdit={r=>{setEditRecord(r);setShowForm(true);}}/>}
+      {tab==="settings"&&<SettingsView stores={stores} setStores={setStores} records={records} payMethods={payMethods} setPayMethods={setPayMethods} settings={settings} setSettings={setSettings} holidays={holidays} setHolidays={setHolidays} onExport={handleExport} onImport={handleImport} showToast={showToast}/>}
+      {tab==="calendar"&&<button style={S.fab} onClick={()=>{setEditRecord(null);setShowForm(true);}}>＋</button>}
+      {showForm&&<RecordForm initial={editRecord} stores={stores} tagMaster={tagMaster} payMethods={payMethods} today={TODAY} onSave={saveRecord} onDelete={deleteRecord} onClose={()=>{setShowForm(false);setEditRecord(null);}}/>}
+      <nav style={S.nav}>
+        {[
+          {id:"calendar",icon:"📅",label:"カレンダー"},
+          {id:"search",  icon:"🔍",label:"検索"},
+          {id:"tags",    icon:"🏷️",label:"タグ"},
+          {id:"settings",icon:"⚙️",label:"設定"},
+        ].map(item=>(
+          <button key={item.id} style={S.navItem(tab===item.id)} onClick={()=>{setTab(item.id);setSelectedDate(null);}}>
+            <span style={{ fontSize:22, lineHeight:1, background:tab===item.id?"#F1F5F9":"transparent", borderRadius:12, padding:"2px 10px", display:"block" }}>{item.icon}</span>
+            {item.label}
+          </button>
+        ))}
+      </nav>
+      {toast&&<div style={S.toast}>{toast}</div>}
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════
+// カレンダービュー
+// ══════════════════════════════════════════════════════════════
+function CalendarView({year,month,calTab,setCalTab,dailyTotal,dotDays,warnCount,warnTag,holidayMap,onPrev,onNext,onGoToday,onSelectDate}) {
+  const days=daysInMonth(year,month), firstDow=firstDayOfWeek(year,month), todayS=todayStr();
+  const monthTotal=Object.values(dailyTotal).reduce((a,b)=>a+b,0);
+  const WEEKS=["日","月","火","水","木","金","土"];
+  const cells=[]; for(let i=0;i<firstDow;i++) cells.push(null); for(let d=1;d<=days;d++) cells.push(d);
+  return (
+    <>
+      <div style={S.header}>
+        <div style={S.headerRow}>
+          <span style={S.title}>ともたろぐ</span>
+          <span style={{fontSize:15,color:"#0369A1",fontWeight:800}}>{fmtFull(monthTotal)}</span>
+        </div>
+      </div>
+      <div style={S.statusBar}>
+        <span style={{color:"#0369A1"}}>🌱</span>
+        <span style={{color:warnCount>0?"#DC2626":"#0369A1",fontWeight:700}}>{warnTag} {warnCount}件</span>
+        <div style={{flex:1}}/>
+        <span style={{fontSize:12,color:"#94A3B8",fontWeight:400}}>{year}年{month}月</span>
+      </div>
+      <div style={S.tabs}>
+        <button style={S.tab(calTab==="purchase")} onClick={()=>setCalTab("purchase")}>購入日</button>
+        <button style={S.tab(calTab==="pay")}      onClick={()=>setCalTab("pay")}>支払日</button>
+      </div>
+      <div style={S.calHeader}>
+        <button style={S.calNavBtn} onClick={onPrev}>‹ 前月</button>
+        <span style={S.calMonth}>{year}年 {month}月</span>
+        <div style={{display:"flex",gap:8}}>
+          <button style={S.todayBtn} onClick={onGoToday}>今月</button>
+          <button style={S.calNavBtn} onClick={onNext}>翌月 ›</button>
+        </div>
+      </div>
+      <div style={S.weekRow}>{WEEKS.map((w,i)=><div key={w} style={S.weekDay(i)}>{w}</div>)}</div>
+      <div style={{background:"#E0E3E8", paddingBottom:2}}>
+      <div style={S.calGrid}>
+        {cells.map((d,i)=>{
+          if (!d) return <div key={"e"+i} style={{background:"#E0E3E8"}}/>;
+          const dStr=`${year}-${String(month).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+          const amt=dailyTotal[dStr]||0, dot=dotDays[dStr];
+          const isToday=dStr===todayS, dow=(firstDow+d-1)%7, holi=holidayMap[dStr];
+          return (
+            <div key={d} style={S.calCell(isToday)} onClick={()=>onSelectDate(dStr)}>
+              <span style={S.cellDate(isToday,dow,!!holi)}>{d}</span>
+              {amt>0&&<span style={S.cellAmt}>{fmtAmt(amt)}</span>}
+              {dot&&<span style={S.cellDot(dot)}/>}
+            </div>
+          );
+        })}
+      </div>
+      </div>
+      <div style={{background:"#E0E3E8", minHeight:60}}/>
+    </>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════
+// 日付詳細ビュー
+// ══════════════════════════════════════════════════════════════
+function DateView({date,records,log,stores,tagMaster,holidayMap,onBack,onEditRecord,onNewRecord,onSaveLog}) {
+  const [editLog,setEditLog]=useState(false);
+  const [draft,setDraft]=useState(log);
+  const {y,m,d}=parseDate(date);
+  const dow=["日","月","火","水","木","金","土"][new Date(y,m-1,d).getDay()];
+  const total=records.reduce((a,r)=>a+recordTotal(r),0);
+  const tagRole=name=>(tagMaster.find(t=>t.name===name)||{}).role||"category";
+  const holi=holidayMap[date];
+  return (
+    <>
+      <div style={S.dateHeader}>
+        <button style={S.backBtn} onClick={onBack}>←</button>
+        <div>
+          <div style={S.dateTitle}>{m}月{d}日（{dow}）{holi&&<span style={{fontSize:12,color:"#C0392B",marginLeft:6}}>{holi}</span>}</div>
+          {total>0&&<div style={{fontSize:12,color:"#0369A1"}}>合計 {fmtFull(total)}</div>}
+        </div>
+        <div style={{flex:1}}/>
+        <button style={{...S.calNavBtn,fontSize:12}} onClick={onNewRecord}>＋追加</button>
+      </div>
+      <div style={S.section}>
+        <div style={S.sectionTitle}><span>📔</span> 生活ログ</div>
+        {editLog?(
+          <>
+            <textarea style={S.logInput} value={draft} onChange={e=>setDraft(e.target.value)} placeholder="この日のメモや思い出を..." autoFocus/>
+            <div style={{display:"flex",gap:8,marginTop:6}}>
+              <button style={{...S.saveBtn,marginTop:0,flex:1}} onClick={()=>{onSaveLog(draft);setEditLog(false);}}>保存</button>
+              <button style={{...S.deleteBtn,marginTop:0,flex:1,borderRadius:10}} onClick={()=>{setDraft(log);setEditLog(false);}}>キャンセル</button>
+            </div>
+          </>
+        ):(
+          <div style={S.logBox} onClick={()=>{setDraft(log);setEditLog(true);}}>
+            {log||<span style={{color:"#BBB"}}>タップして記録…</span>}
+          </div>
+        )}
+      </div>
+      <div style={{...S.section,marginTop:16}}>
+        <div style={S.sectionTitle}><span>🧾</span> 支出一覧</div>
+        {records.length===0
+          ?<div style={{color:"#BBB",fontSize:14,textAlign:"center",padding:"20px 0"}}>記録なし</div>
+          :records.map(r=>(
+            <div key={r.id} style={S.receiptCard} onClick={()=>onEditRecord(r)}>
+              <div style={S.receiptStore}>{storeName(r.storeId,stores)}</div>
+              {r.items.map((item,i)=>(
+                <div key={i} style={S.receiptItem}><span>{item.name}</span><span style={S.receiptPrice}>{fmtFull(item.price)}</span></div>
+              ))}
+              {r.items.length>1&&(
+                <div style={{...S.receiptItem,borderTop:"1px dashed #EEE",marginTop:4,paddingTop:4}}>
+                  <span style={{color:"#999",fontSize:12}}>小計</span>
+                  <span style={{...S.receiptPrice,color:"#0369A1"}}>{fmtFull(recordTotal(r))}</span>
+                </div>
+              )}
+              {r.tags.length>0&&<div style={S.receiptTags}>{r.tags.map(t=><span key={t} style={S.tag(tagRole(t))}>{t}</span>)}</div>}
+              {r.memo&&<div style={{fontSize:12,color:"#999",marginTop:6}}>📝 {r.memo}</div>}
+            </div>
+          ))
+        }
+      </div>
+      <div style={{height:16}}/>
+    </>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════
+// 入力フォーム
+// ══════════════════════════════════════════════════════════════
+function RecordForm({initial,stores,tagMaster,payMethods,today,onSave,onDelete,onClose}) {
+  const isNew=!initial?.id;
+  const [purchaseDate,setPurchaseDate]=useState(initial?.purchaseDate||today);
+  const [purchaseTime,setPurchaseTime]=useState(initial?.purchaseTime||"00:00");
+  const [payDate,setPayDate]=useState(initial?.payDate||today);
+  const [payTime,setPayTime]=useState(initial?.payTime||"00:00");
+  const [storeId,setStoreId]=useState(initial?.storeId||"");
+  const [payMethodId,setPayMethodId]=useState(initial?.payMethodId||"pm1");
+  const [items,setItems]=useState(initial?.items||[{name:"",price:""}]);
+  const [tags,setTags]=useState(initial?.tags||[]);
+  const [memo,setMemo]=useState(initial?.memo||"");
+  const activeStores=stores.filter(s=>!s.closed);
+  const activePay=payMethods.filter(p=>p.active);
+  const toggleTag=t=>setTags(prev=>prev.includes(t)?prev.filter(x=>x!==t):[...prev,t]);
+  const setItemField=(i,f,v)=>setItems(prev=>prev.map((item,idx)=>idx===i?{...item,[f]:v}:item));
+  const handleSave=()=>{
+    const ci=items.filter(i=>i.name.trim()||i.price).map(i=>({name:i.name.trim(),price:Number(i.price)||0}));
+    if (!ci.length||!storeId) return;
+    onSave({id:initial?.id||null,purchaseDate,purchaseTime,payDate,payTime,storeId,payMethodId,items:ci,tags,memo,source:initial?.source||"manual",receiptImageIds:initial?.receiptImageIds||[]});
+  };
+  return (
+    <div style={S.overlay} onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div style={S.sheet}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          <div style={S.sheetTitle}>{isNew?"新規記録":"編集"}</div>
+          <button style={{background:"none",border:"none",fontSize:20,cursor:"pointer",color:"#999"}} onClick={onClose}>✕</button>
+        </div>
+        <div style={S.label}>購入日</div>
+        <div style={{display:"flex",gap:6}}>
+          <input style={{...S.input,flex:2}} type="date" value={purchaseDate} onChange={e=>setPurchaseDate(e.target.value)}/>
+          <input style={{...S.input,flex:1}} type="time" value={purchaseTime} onChange={e=>setPurchaseTime(e.target.value)}/>
+        </div>
+        <div style={S.label}>支払日</div>
+        <div style={{display:"flex",gap:6}}>
+          <input style={{...S.input,flex:2}} type="date" value={payDate} onChange={e=>setPayDate(e.target.value)}/>
+          <input style={{...S.input,flex:1}} type="time" value={payTime} onChange={e=>setPayTime(e.target.value)}/>
+        </div>
+        <div style={S.label}>店舗</div>
+        <select style={S.select} value={storeId} onChange={e=>setStoreId(e.target.value)}>
+          <option value="">選択してください</option>
+          {activeStores.map(s=><option key={s.id} value={s.id}>{s.group}{s.branch?` ${s.branch}`:""}</option>)}
+        </select>
+        <div style={S.label}>支払方法</div>
+        <select style={S.select} value={payMethodId} onChange={e=>setPayMethodId(e.target.value)}>
+          {activePay.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}
+        </select>
+        <div style={S.label}>商品・明細</div>
+        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+          <div style={{flex:1}}/>
+          <button style={{background:"none",border:"1px solid #B8DEDD",borderRadius:8,padding:"4px 10px",fontSize:12,color:"#0369A1",cursor:"pointer"}}
+            onClick={()=>alert("OCR機能は将来実装予定です")}>📷 レシート読取</button>
+        </div>
+        {items.map((item,i)=>(
+          <div key={i} style={{display:"flex",gap:6,marginBottom:6}}>
+            <input style={{...S.input,flex:2}} placeholder="商品名" value={item.name} onChange={e=>setItemField(i,"name",e.target.value)}/>
+            <input style={{...S.input,flex:1}} placeholder="金額" type="number" value={item.price} onChange={e=>setItemField(i,"price",e.target.value)}/>
+            {items.length>1&&<button style={{background:"none",border:"none",cursor:"pointer",color:"#999",fontSize:18}} onClick={()=>setItems(p=>p.filter((_,idx)=>idx!==i))}>×</button>}
+          </div>
+        ))}
+        <button style={{background:"none",border:"1px dashed #CCC",borderRadius:8,padding:"6px 12px",fontSize:13,cursor:"pointer",color:"#888",width:"100%"}} onClick={()=>setItems(p=>[...p,{name:"",price:""}])}>＋ 明細を追加</button>
+        <div style={S.label}>タグ</div>
+        <div style={S.tagGrid}>{tagMaster.map(t=><button key={t.name} style={S.tagChip(tags.includes(t.name),t.role)} onClick={()=>toggleTag(t.name)}>{t.name}</button>)}</div>
+        <div style={S.label}>メモ</div>
+        <input style={S.input} placeholder="備考など" value={memo} onChange={e=>setMemo(e.target.value)}/>
+        <button style={S.saveBtn} onClick={handleSave}>保存</button>
+        {!isNew&&<button style={S.deleteBtn} onClick={()=>onDelete(initial.id)}>削除</button>}
+      </div>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════
+// 検索ビュー
+// ══════════════════════════════════════════════════════════════
+function SearchView({q,setQ,results,stores,tagMaster,onEdit}) {
+  const tagRole=name=>(tagMaster.find(t=>t.name===name)||{}).role||"category";
+  return (
+    <>
+      <div style={S.header}><div style={S.headerRow}><span style={S.title}>検索</span></div></div>
+      <div style={{padding:"12px 12px 0"}}>
+        <input style={S.searchInput} placeholder="商品名・店舗・タグで検索…" value={q} onChange={e=>setQ(e.target.value)} autoFocus/>
+      </div>
+      <div style={{padding:"8px 12px", minHeight:200}}>
+        {q&&results.length===0&&<div style={{background:"#fff",borderRadius:12,padding:"24px",textAlign:"center",color:"#BBB",fontSize:14}}>見つかりませんでした</div>}
+        {results.map(r=>(
+          <div key={r.id} style={S.searchResult} onClick={()=>onEdit(r)}>
+            <div style={{fontSize:12,color:"#999",marginBottom:2}}>📅 {r.purchaseDate} ／ {storeName(r.storeId,stores)}</div>
+            {r.items.map((item,i)=>(
+              <div key={i} style={{display:"flex",justifyContent:"space-between",fontSize:14}}>
+                <span>{item.name}</span><span style={{fontWeight:600}}>{fmtFull(item.price)}</span>
+              </div>
+            ))}
+            <div style={S.receiptTags}>{r.tags.map(t=><span key={t} style={S.tag(tagRole(t))}>{t}</span>)}</div>
+          </div>
+        ))}
+        {!q&&<div style={{background:"#fff",borderRadius:12,padding:"40px 0",textAlign:"center",color:"#CCC",fontSize:14}}>🔍 キーワードを入力</div>}
+      </div>
+    </>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════
+// タグビュー
+// ══════════════════════════════════════════════════════════════
+function TagsView({tagStats,tagMaster,setTagMaster,records,stores,onEdit}) {
+  const [activeTag,setActiveTag]=useState(null);
+  const [editMode,setEditMode]=useState(false);
+  const [newTagName,setNewTagName]=useState("");
+  const tagRole=name=>(tagMaster.find(t=>t.name===name)||{}).role||"category";
+  const tagRecords=activeTag?records.filter(r=>r.tags.includes(activeTag)):[];
+  const tagTotal=tagRecords.reduce((a,r)=>a+recordTotal(r),0);
+  const addTag=()=>{ const n=(newTagName.trim().startsWith("#")?newTagName.trim():"#"+newTagName.trim()); if(!n||n==="#"||tagMaster.find(t=>t.name===n)) return; setTagMaster(prev=>[...prev,{name:n,role:"category",excludeFromTotal:false,calendarDot:false,calendarDotColor:"#2980B9"}]); setNewTagName(""); };
+  const roles=["category","flag","medical","person","exclude"];
+  const roleLabel=r=>({category:"分類",flag:"フラグ",medical:"医療費",person:"人物",exclude:"除外"}[r]||r);
+  return (
+    <>
+      <div style={S.header}>
+        <div style={S.headerRow}>
+          <span style={S.title}>{activeTag||"タグ"}</span>
+          {activeTag?<button style={{...S.calNavBtn,fontSize:12}} onClick={()=>setActiveTag(null)}>← 戻る</button>
+                    :<button style={{...S.calNavBtn,fontSize:12}} onClick={()=>setEditMode(v=>!v)}>{editMode?"完了":"編集"}</button>}
+        </div>
+      </div>
+      {!activeTag?(
+        <div style={S.tagSection}>
+          {editMode&&(
+            <div style={{background:"#fff",borderRadius:12,padding:"12px",marginBottom:10}}>
+              <div style={{fontSize:11,color:"#999",marginBottom:6}}>タップでrole切替 ／ ●でドット ／ 除外で集計除外</div>
+              {tagMaster.map(t=>(
+                <div key={t.name} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 0",borderBottom:"1px solid #F0EBE0"}}>
+                  <span style={{fontSize:13,fontWeight:700,flex:1}}>{t.name}</span>
+                  <button style={{fontSize:11,padding:"2px 6px",borderRadius:99,border:"1px solid #DDD",cursor:"pointer",background:t.role==="flag"?"#FFE4E1":t.role==="medical"?"#F0E6FF":t.role==="exclude"?"#F5F5F5":"#EBF5FB"}}
+                    onClick={()=>setTagMaster(prev=>prev.map(x=>x.name===t.name?{...x,role:roles[(roles.indexOf(x.role)+1)%roles.length]}:x))}>{roleLabel(t.role)}</button>
+                  <button style={{fontSize:11,padding:"2px 6px",borderRadius:6,border:"1px solid #DDD",background:t.calendarDot?"#E74C3C":"#fff",color:t.calendarDot?"#fff":"#999",cursor:"pointer"}}
+                    onClick={()=>setTagMaster(prev=>prev.map(x=>x.name===t.name?{...x,calendarDot:!x.calendarDot}:x))}>●</button>
+                  <button style={{fontSize:11,padding:"2px 6px",borderRadius:6,border:"1px solid #DDD",background:t.excludeFromTotal?"#555":"#fff",color:t.excludeFromTotal?"#fff":"#999",cursor:"pointer"}}
+                    onClick={()=>setTagMaster(prev=>prev.map(x=>x.name===t.name?{...x,excludeFromTotal:!x.excludeFromTotal}:x))}>除外</button>
+                </div>
+              ))}
+              <div style={{display:"flex",gap:6,marginTop:12}}>
+                <input style={{...S.input,flex:1}} placeholder="#新しいタグ" value={newTagName} onChange={e=>setNewTagName(e.target.value)}/>
+                <button style={{background:"#0369A1",color:"#fff",border:"none",borderRadius:8,padding:"0 14px",cursor:"pointer",fontSize:14}} onClick={addTag}>追加</button>
+              </div>
+            </div>
+          )}
+          {!editMode&&Object.keys(tagStats).length===0&&<div style={{background:"#fff",borderRadius:12,padding:24,textAlign:"center",color:"#CCC"}}>タグなし</div>}
+          {!editMode&&(
+            <div style={{background:"#fff",borderRadius:12,overflow:"hidden"}}>
+            {Object.entries(tagStats).map(([t,cnt],i,arr)=>{
+              const tot=records.filter(r=>r.tags.includes(t)).reduce((a,r)=>a+recordTotal(r),0);
+              const tm=tagMaster.find(x=>x.name===t)||{};
+              return (
+                <div key={t} style={{...S.tagRow,padding:"10px 14px",borderBottom:i<arr.length-1?"1px solid #F3F4F6":"none"}} onClick={()=>setActiveTag(t)}>
+                  <div><span style={S.tagName}>{t}</span>{tm.excludeFromTotal&&<span style={{fontSize:10,color:"#999",marginLeft:6}}>（集計除外）</span>}</div>
+                  <div style={{textAlign:"right"}}>
+                    <div style={{fontSize:13,fontWeight:700,color:"#0369A1"}}>{fmtFull(tot)}</div>
+                    <div style={S.tagCount}>{cnt}件</div>
+                  </div>
+                </div>
+              );
+            })}
+            </div>
+          )}
+        </div>
+      ):(
+        <div style={{padding:"0 12px"}}>
+          <div style={{background:"#F0FBFA",margin:"12px 0 8px",borderRadius:10,border:"1px solid #E8E4DC",padding:"10px 14px",display:"flex",gap:16,alignItems:"center"}}>
+            <span style={{fontWeight:700,color:"#0369A1"}}>{fmtFull(tagTotal)}</span>
+            <span style={{color:"#999",fontSize:12}}>{tagRecords.length}件</span>
+          </div>
+          {tagRecords.map(r=>(
+            <div key={r.id} style={S.searchResult} onClick={()=>onEdit(r)}>
+              <div style={{fontSize:12,color:"#999",marginBottom:2}}>📅 {r.purchaseDate} ／ {storeName(r.storeId,stores)}</div>
+              {r.items.map((item,i)=>(
+                <div key={i} style={{display:"flex",justifyContent:"space-between",fontSize:14}}>
+                  <span>{item.name}</span><span style={{fontWeight:600}}>{fmtFull(item.price)}</span>
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
+    </>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════
+// 設定ビュー
+// ══════════════════════════════════════════════════════════════
+function SettingsView({stores,setStores,records,payMethods,setPayMethods,settings,setSettings,holidays,setHolidays,onExport,onImport,showToast}) {
+  const [showStores,setShowStores]=useState(false);
+  const [showPay,setShowPay]=useState(false);
+  const [showHoli,setShowHoli]=useState(false);
+  const [newGroup,setNewGroup]=useState("");
+  const [newBranch,setNewBranch]=useState("");
+  const [newPayName,setNewPayName]=useState("");
+  const [newHoliDate,setNewHoliDate]=useState("");
+  const [newHoliName,setNewHoliName]=useState("");
+  const fileRef=useRef();
+  const totalAmt=records.reduce((a,r)=>a+recordTotal(r),0);
+  const customEntries=Object.entries(holidays).sort((a,b)=>a[0].localeCompare(b[0]));
+  const addStore=()=>{ if(!newGroup.trim()) return; setStores(prev=>[...prev,{id:"s"+Date.now(),group:newGroup.trim(),branch:newBranch.trim(),closed:false}]); setNewGroup(""); setNewBranch(""); };
+  const addPay=()=>{ if(!newPayName.trim()) return; setPayMethods(prev=>[...prev,{id:"pm"+Date.now(),name:newPayName.trim(),type:"other",active:true}]); setNewPayName(""); };
+  const addHoli=()=>{ if(!newHoliDate||!newHoliName.trim()) return; setHolidays(prev=>({...prev,[newHoliDate]:newHoliName.trim()})); setNewHoliDate(""); setNewHoliName(""); showToast("祝日を追加しました"); };
+  const removeHoli=(date)=>{ setHolidays(prev=>{ const n={...prev}; delete n[date]; return n; }); showToast("削除しました"); };
+  return (
+    <>
+      <div style={S.header}><span style={S.title}>設定</span></div>
+      <div style={S.sectionHead}>DATA</div>
+      <div style={S.settingRow}><span style={S.settingLabel}>総記録件数</span><span style={S.settingValue}>{records.length}件</span></div>
+      <div style={S.settingRow}><span style={S.settingLabel}>総支出額</span><span style={{...S.settingValue,color:"#0369A1",fontWeight:700}}>{fmtFull(totalAmt)}</span></div>
+      <div style={S.sectionHead}>バックアップ</div>
+      <button style={S.actionBtn()} onClick={onExport}><span>📤 JSONエクスポート</span><span style={{fontSize:12,color:"#999"}}>全データを保存</span></button>
+      <button style={S.actionBtn()} onClick={()=>fileRef.current.click()}><span>📥 JSONインポート</span><span style={{fontSize:12,color:"#999"}}>バックアップから復元</span></button>
+      <input ref={fileRef} type="file" accept=".json" style={{display:"none"}} onChange={e=>{ const f=e.target.files[0]; if(!f) return; importJSON(f,onImport,err=>showToast("読込エラー: "+err)); e.target.value=""; }}/>
+      <div style={{padding:"8px 16px 4px",fontSize:11,color:"#BBB",lineHeight:1.6}}>インポートすると現在のデータは上書きされます。事前にエクスポートを推奨します。</div>
+      <div style={S.sectionHead}>祝日管理</div>
+      <button style={S.actionBtn()} onClick={()=>setShowHoli(v=>!v)}><span>🎌 祝日マスター</span><span style={S.settingValue}>{showHoli?"▲":"▼"} カスタム{customEntries.length}件</span></button>
+      {showHoli&&(
+        <div style={{background:"#fff",padding:"8px 16px 16px"}}>
+          <div style={{fontSize:11,color:"#999",marginBottom:8}}>2010〜2030年は組み込み済みです。追加・修正が必要な場合のみ入力してください。同じ日付を登録すると上書きされます。</div>
+          {customEntries.length===0&&<div style={{color:"#CCC",fontSize:13,padding:"8px 0"}}>カスタム祝日なし</div>}
+          {customEntries.map(([date,name])=>(
+            <div key={date} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 0",borderBottom:"1px solid #F0EBE0"}}>
+              <div><span style={{fontSize:13,fontWeight:700,color:"#C0392B"}}>{date}</span><span style={{fontSize:13,marginLeft:8}}>{name}</span></div>
+              <button style={{background:"none",border:"1px solid #E74C3C",borderRadius:6,padding:"2px 8px",fontSize:12,cursor:"pointer",color:"#E74C3C"}} onClick={()=>removeHoli(date)}>削除</button>
+            </div>
+          ))}
+          <div style={{marginTop:12,display:"flex",flexDirection:"column",gap:6}}>
+            <div style={{display:"flex",gap:6}}>
+              <input style={{...S.input,flex:1}} type="date" value={newHoliDate} onChange={e=>setNewHoliDate(e.target.value)}/>
+              <input style={{...S.input,flex:1.5}} placeholder="祝日名" value={newHoliName} onChange={e=>setNewHoliName(e.target.value)}/>
+            </div>
+            <button style={{background:"#0369A1",color:"#fff",border:"none",borderRadius:8,padding:"10px",cursor:"pointer",fontSize:14,fontWeight:600}} onClick={addHoli}>追加・上書き</button>
+          </div>
+        </div>
+      )}
+      <div style={S.sectionHead}>STORES</div>
+      <button style={S.actionBtn()} onClick={()=>setShowStores(v=>!v)}><span>店舗マスター管理</span><span style={S.settingValue}>{showStores?"▲":"▼"} {stores.length}件</span></button>
+      {showStores&&(
+        <div style={{background:"#fff",padding:"8px 16px 16px"}}>
+          {stores.map(s=>(
+            <div key={s.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:"1px solid #F0EBE0"}}>
+              <div style={{fontSize:14,color:s.closed?"#BBB":"#2C2C2C"}}>{s.group}{s.branch?` ${s.branch}`:""}{s.closed&&<span style={{fontSize:11,color:"#E74C3C",marginLeft:6}}>閉店</span>}</div>
+              <button style={{background:"none",border:"1px solid #DDD",borderRadius:6,padding:"3px 8px",fontSize:12,cursor:"pointer",color:"#888"}} onClick={()=>setStores(prev=>prev.map(x=>x.id===s.id?{...x,closed:!x.closed}:x))}>{s.closed?"再開":"閉店"}</button>
+            </div>
+          ))}
+          <div style={{marginTop:12,display:"flex",gap:6}}>
+            <input style={{...S.input,flex:2}} placeholder="グループ名" value={newGroup} onChange={e=>setNewGroup(e.target.value)}/>
+            <input style={{...S.input,flex:1.5}} placeholder="支店名(任意)" value={newBranch} onChange={e=>setNewBranch(e.target.value)}/>
+            <button style={{background:"#0369A1",color:"#fff",border:"none",borderRadius:8,padding:"0 12px",cursor:"pointer",fontSize:14}} onClick={addStore}>追加</button>
+          </div>
+        </div>
+      )}
+      <div style={S.sectionHead}>支払方法</div>
+      <button style={S.actionBtn()} onClick={()=>setShowPay(v=>!v)}><span>支払方法マスター</span><span style={S.settingValue}>{showPay?"▲":"▼"} {payMethods.length}件</span></button>
+      {showPay&&(
+        <div style={{background:"#fff",padding:"8px 16px 16px"}}>
+          {payMethods.map(p=>(
+            <div key={p.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:"1px solid #F0EBE0"}}>
+              <div style={{fontSize:14,color:p.active?"#2C2C2C":"#BBB"}}>{p.name}<span style={{fontSize:11,color:"#999",marginLeft:6}}>({p.type})</span></div>
+              <button style={{background:"none",border:"1px solid #DDD",borderRadius:6,padding:"3px 8px",fontSize:12,cursor:"pointer",color:"#888"}} onClick={()=>setPayMethods(prev=>prev.map(x=>x.id===p.id?{...x,active:!x.active}:x))}>{p.active?"無効化":"有効化"}</button>
+            </div>
+          ))}
+          <div style={{marginTop:12,display:"flex",gap:6}}>
+            <input style={{...S.input,flex:1}} placeholder="支払方法名（例：PayPay）" value={newPayName} onChange={e=>setNewPayName(e.target.value)}/>
+            <button style={{background:"#0369A1",color:"#fff",border:"none",borderRadius:8,padding:"0 12px",cursor:"pointer",fontSize:14}} onClick={addPay}>追加</button>
+          </div>
+        </div>
+      )}
+      <div style={S.sectionHead}>ABOUT</div>
+      <div style={S.settingRow}><span style={S.settingLabel}>ともたろぐ</span><span style={S.settingValue}>Ver {DATA_VERSION}</span></div>
+      <div style={{padding:"12px 16px 20px",fontSize:12,color:"#BBB",lineHeight:1.8,textAlign:"center"}}>生活を振り返るための<br/>カレンダー型家計簿</div>
+    </>
+  );
+}
+
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<TomotaKakeibo />);
+  </script>
+
+  <!-- Service Worker 登録 -->
+  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("./sw.js")
+          .then((reg) => console.log("[SW] registered:", reg.scope))
+          .catch((err) => console.warn("[SW] registration failed:", err));
+      });
+    }
+  </script>
+</body>
+</html>
