@@ -64,7 +64,7 @@ const lsGet = (k,fb) => { try{ const v=localStorage.getItem(k); return v!==null?
 const lsSet = (k,v)  => { try{ localStorage.setItem(k,JSON.stringify(v)); }catch{} };
 
 const APP_NAME    = "ともたろぐ";
-const DATA_VERSION = "1.14";
+const DATA_VERSION = "1.15";
 
 // ── 祝日データ 2010-2030 ──────────────────────────────────────
 const BUILTIN_HOLIDAYS = {
@@ -172,8 +172,25 @@ const S = {
   headerRow:{ display:"flex", alignItems:"center", justifyContent:"space-between" },
   title:{ fontSize:16, fontWeight:700, letterSpacing:0.3, color:"#1E293B" },
   statusBar:{ background:"#fff", padding:"4px 16px", display:"flex", gap:10, fontSize:13, alignItems:"center", fontWeight:600, borderBottom:"1px solid #E8EDF2" },
-  tabs:{ display:"flex", background:"#F7F8FA", padding:"0 16px", borderBottom:"1px solid #E8EDF2" },
-  tab:(a)=>({ padding:"5px 18px", fontSize:13, fontWeight:a?700:400, color:a?"#0369A1":"#94A3B8", borderBottom:a?"2px solid #0369A1":"2px solid transparent", cursor:"pointer", background:"none", border:"none" }),
+
+  // ── 共通ヘッダー（タイトル＋状態表示＋年月）"遊びの花壇" ──────────
+  appHeader:{ background:"#fff", padding:"12px 18px 10px", position:"sticky", top:0, zIndex:50 },
+  appHeaderRow:{ display:"flex", alignItems:"center", justifyContent:"space-between" },
+  appTitle:{ fontSize:18, fontWeight:800, letterSpacing:0.3, color:"#1E293B" },
+  appHeaderRight:{ fontSize:12.5, display:"flex", alignItems:"center", gap:6 },
+  appHeaderSub:{ fontSize:11.5, color:"#94A3B8", fontWeight:500, marginTop:3 },
+
+  // ── カード状タブ（選択中=白カード＋影／未選択=背景なし） ────────
+  tabs:{ display:"flex", gap:6, background:"#F7F8FA", padding:"4px 14px 10px" },
+  tab:(a)=>({
+    flex:1, padding:"9px 0", fontSize:13.5, fontWeight:a?700:500,
+    color:a?"#0369A1":"#94A3B8",
+    background:a?"#fff":"transparent",
+    borderRadius:14, border:"none", cursor:"pointer",
+    boxShadow:a?"0 3px 10px rgba(3,105,161,0.13), 0 1px 2px rgba(0,0,0,0.04)":"none",
+    transform:a?"translateY(-1px) scale(1.03)":"translateY(0) scale(1)",
+    transition:"all 0.18s cubic-bezier(0.34,1.56,0.64,1)",
+  }),
   calHeader:{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"5px 12px 3px" },
   calMonth:{ fontSize:15, fontWeight:600, color:"#1E293B" },
   calNavBtn:{ background:"none", border:"1px solid #E2E8F0", borderRadius:7, padding:"3px 10px", fontSize:13, cursor:"pointer", color:"#64748B" },
@@ -187,6 +204,9 @@ const S = {
   cellDot:(c)=>({ width:5, height:5, borderRadius:"50%", background:c||"#E74C3C", position:"absolute", top:3, right:3 }),
   dateHeader:{ display:"flex", alignItems:"center", padding:"12px 16px", gap:8, borderBottom:"1px solid #E8E4DC", background:"#fff" },
   backBtn:{ background:"#F1F5F9", border:"none", borderRadius:10, fontSize:18, cursor:"pointer", padding:"6px 14px", color:"#0369A1", fontWeight:700, minWidth:44, minHeight:36 },
+  // ── 設定配下サブ画面：常に最上部固定の「戻る」バー ─────────
+  subBackBar:{ position:"sticky", top:0, zIndex:60, background:"#EFF6FF", borderBottom:"1px solid #DCEEFB", padding:"10px 14px" },
+  subBackBtn:{ background:"#0369A1", color:"#fff", border:"none", borderRadius:12, padding:"9px 18px", fontSize:14, fontWeight:700, cursor:"pointer", boxShadow:"0 2px 8px rgba(3,105,161,0.25)" },
   dateTitle:{ fontSize:17, fontWeight:700 },
   section:{ padding:"14px 16px 0" },
   sectionTitle:{ fontSize:11, fontWeight:700, color:"#0369A1", letterSpacing:1.5, marginBottom:8, display:"flex", alignItems:"center", gap:6 },
@@ -323,11 +343,22 @@ function TomotaKakeibo() {
   return (
     <div style={S.app}>
       {tab==="calendar"&&!selectedDate&&(
-        <div style={S.tabs}>
-          <button style={S.tab(calTab==="purchase")} onClick={()=>setCalTab("purchase")}>購入日</button>
-          <button style={S.tab(calTab==="pay")}      onClick={()=>setCalTab("pay")}>支払日</button>
-          <button style={S.tab(calTab==="zukan")}    onClick={()=>setCalTab("zukan")}>図鑑</button>
-        </div>
+        <>
+          <div style={S.appHeader}>
+            <div style={S.appHeaderRow}>
+              <span style={S.appTitle}>{APP_NAME}</span>
+              <span style={S.appHeaderRight}>
+                <span style={{color:warnCount>0?"#DC2626":"#0369A1",fontWeight:700}}>🌱 {warnTag} {warnCount}件</span>
+              </span>
+            </div>
+            <div style={S.appHeaderSub}>{viewYear}年{viewMonth}月</div>
+          </div>
+          <div style={S.tabs}>
+            <button style={S.tab(calTab==="purchase")} onClick={()=>setCalTab("purchase")}>購入日</button>
+            <button style={S.tab(calTab==="pay")}      onClick={()=>setCalTab("pay")}>支払日</button>
+            <button style={S.tab(calTab==="zukan")}    onClick={()=>setCalTab("zukan")}>図鑑</button>
+          </div>
+        </>
       )}
       {tab==="calendar"&&!selectedDate&&calTab!=="zukan"&&(
         <CalendarView year={viewYear} month={viewMonth} calTab={calTab} setCalTab={setCalTab}
@@ -399,17 +430,12 @@ function ZukanView({stores, records, productMaster, zukanTab, setZukanTab}) {
 
   return (
     <>
-      <div style={S.header}>
-        <div style={S.headerRow}>
-          <span style={S.title}>図鑑</span>
-          <span style={{fontSize:12,color:"#94A3B8"}}>眺めて楽しむ</span>
-        </div>
-      </div>
+      <div style={{padding:"10px 18px 0",fontSize:12,color:"#94A3B8",fontWeight:600}}>📖 眺めて楽しむ図鑑</div>
       {/* 図鑑サブタブ */}
-      <div style={{display:"flex",background:"#F7F8FA",padding:"10px 16px",gap:10}}>
+      <div style={{display:"flex",background:"#F7F8FA",padding:"8px 16px 10px",gap:10}}>
         {ZUKAN_SECTIONS.map(sec=>(
           <button key={sec.id} onClick={()=>setZukanTab(sec.id)}
-            style={{flex:1,padding:"10px 8px",borderRadius:12,border:"none",cursor:"pointer",fontSize:13,fontWeight:zukanTab===sec.id?700:400,background:zukanTab===sec.id?"#fff":"transparent",color:zukanTab===sec.id?"#0369A1":"#94A3B8",boxShadow:zukanTab===sec.id?"0 1px 4px rgba(0,0,0,0.10)":"none"}}>
+            style={{flex:1,padding:"10px 8px",borderRadius:14,border:"none",cursor:"pointer",fontSize:13,fontWeight:zukanTab===sec.id?700:500,background:zukanTab===sec.id?"#fff":"transparent",color:zukanTab===sec.id?"#0369A1":"#94A3B8",boxShadow:zukanTab===sec.id?"0 3px 10px rgba(3,105,161,0.13), 0 1px 2px rgba(0,0,0,0.04)":"none",transform:zukanTab===sec.id?"translateY(-1px) scale(1.03)":"none",transition:"all 0.18s cubic-bezier(0.34,1.56,0.64,1)"}}>
             {sec.label}
           </button>
         ))}
@@ -496,21 +522,12 @@ function CalendarView({year,month,calTab,setCalTab,dailyTotal,dotDays,warnCount,
   const cells=[]; for(let i=0;i<firstDow;i++) cells.push(null); for(let d=1;d<=days;d++) cells.push(d);
   return (
     <>
-      <div style={S.header}>
-        <div style={S.headerRow}>
-          <span style={S.title}>ともたろぐ</span>
-          <span style={{fontSize:15,color:"#0369A1",fontWeight:800}}>{fmtFull(monthTotal)}</span>
-        </div>
-      </div>
-      <div style={S.statusBar}>
-        <span style={{color:"#0369A1"}}>🌱</span>
-        <span style={{color:warnCount>0?"#DC2626":"#0369A1",fontWeight:700}}>{warnTag} {warnCount}件</span>
-        <div style={{flex:1}}/>
-        <span style={{fontSize:12,color:"#94A3B8",fontWeight:400}}>{year}年{month}月</span>
-      </div>
       <div style={S.calHeader}>
         <button style={S.calNavBtn} onClick={onPrev}>‹ 前月</button>
-        <span style={S.calMonth}>{year}年 {month}月</span>
+        <div style={{display:"flex",flexDirection:"column",alignItems:"center"}}>
+          <span style={S.calMonth}>{year}年 {month}月</span>
+          <span style={{fontSize:11,color:"#0369A1",fontWeight:700,marginTop:1}}>{fmtFull(monthTotal)}</span>
+        </div>
         <div style={{display:"flex",gap:8}}>
           <button style={S.todayBtn} onClick={onGoToday}>今月</button>
           <button style={S.calNavBtn} onClick={onNext}>翌月 ›</button>
@@ -875,7 +892,10 @@ function StoreManagerView({stores,setStores,records,onBack,showToast}) {
   const deleteStore=(id)=>{ if(usedIds.has(id)){showToast("使用中のお店は削除できません");return;} setStores(prev=>prev.filter(x=>x.id!==id)); showToast("削除しました"); };
   return (
     <>
-      <div style={S.header}><div style={S.headerRow}><button style={S.backBtn} onClick={onBack}>←</button><span style={S.title}>店名管理</span><span style={{fontSize:12,color:"#94A3B8"}}>{stores.length}件</span></div></div>
+      <div style={S.subBackBar}>
+        <button style={S.subBackBtn} onClick={onBack}>← 設定へ戻る</button>
+      </div>
+      <div style={S.header}><div style={S.headerRow}><span style={S.title}>店名管理</span><span style={{fontSize:12,color:"#94A3B8"}}>{stores.length}件</span></div></div>
       <div style={{background:"#fff",padding:"12px 16px",borderBottom:"1px solid #E8EDF2"}}>
         <div style={{fontSize:12,color:"#94A3B8",marginBottom:8}}>新規追加</div>
         <div style={{display:"flex",gap:6,marginBottom:8}}>
@@ -941,7 +961,10 @@ function ProductManagerView({productMaster,setProductMaster,onBack,showToast}) {
   </div>);
   return (
     <>
-      <div style={S.header}><div style={S.headerRow}><button style={S.backBtn} onClick={onBack}>←</button><span style={S.title}>商品管理</span><span style={{fontSize:12,color:"#94A3B8"}}>{productMaster.length}件</span></div></div>
+      <div style={S.subBackBar}>
+        <button style={S.subBackBtn} onClick={onBack}>← 設定へ戻る</button>
+      </div>
+      <div style={S.header}><div style={S.headerRow}><span style={S.title}>商品管理</span><span style={{fontSize:12,color:"#94A3B8"}}>{productMaster.length}件</span></div></div>
       <div style={{background:"#fff",padding:"12px 16px",borderBottom:"1px solid #E8EDF2"}}>
         <div style={{fontSize:12,color:"#94A3B8",marginBottom:8}}>新規追加</div>
         <Fields f={form} onChange={setForm}/>

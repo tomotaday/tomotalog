@@ -1,8 +1,8 @@
 // ともたろぐ Service Worker
 // キャッシュ戦略: Cache First (アプリシェル) + Stale While Revalidate (CDNスクリプト)
 
-const CACHE_NAME  = "tomotalog-v1.13";
-const CDN_CACHE   = "tomotalog-cdn-v1.13";
+const CACHE_NAME  = "tomotalog-v1.15";
+const CDN_CACHE   = "tomotalog-cdn-v1.15";
 
 // アプリシェル（ローカルファイル）
 const APP_SHELL = [
