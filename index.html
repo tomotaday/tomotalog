@@ -64,7 +64,7 @@ const lsGet = (k,fb) => { try{ const v=localStorage.getItem(k); return v!==null?
 const lsSet = (k,v)  => { try{ localStorage.setItem(k,JSON.stringify(v)); }catch{} };
 
 const APP_NAME    = "ともたろぐ";
-const DATA_VERSION = "1.13";
+const DATA_VERSION = "1.14";
 
 // ── 祝日データ 2010-2030 ──────────────────────────────────────
 const BUILTIN_HOLIDAYS = {
@@ -186,7 +186,7 @@ const S = {
   cellAmt:{ fontSize:11, color:"#0F172A", fontWeight:800, lineHeight:1.1, whiteSpace:"nowrap", display:"block", width:"100%", overflow:"visible" },
   cellDot:(c)=>({ width:5, height:5, borderRadius:"50%", background:c||"#E74C3C", position:"absolute", top:3, right:3 }),
   dateHeader:{ display:"flex", alignItems:"center", padding:"12px 16px", gap:8, borderBottom:"1px solid #E8E4DC", background:"#fff" },
-  backBtn:{ background:"none", border:"none", fontSize:20, cursor:"pointer", padding:0, color:"#0369A1" },
+  backBtn:{ background:"#F1F5F9", border:"none", borderRadius:10, fontSize:18, cursor:"pointer", padding:"6px 14px", color:"#0369A1", fontWeight:700, minWidth:44, minHeight:36 },
   dateTitle:{ fontSize:17, fontWeight:700 },
   section:{ padding:"14px 16px 0" },
   sectionTitle:{ fontSize:11, fontWeight:700, color:"#0369A1", letterSpacing:1.5, marginBottom:8, display:"flex", alignItems:"center", gap:6 },
@@ -322,6 +322,13 @@ function TomotaKakeibo() {
 
   return (
     <div style={S.app}>
+      {tab==="calendar"&&!selectedDate&&(
+        <div style={S.tabs}>
+          <button style={S.tab(calTab==="purchase")} onClick={()=>setCalTab("purchase")}>購入日</button>
+          <button style={S.tab(calTab==="pay")}      onClick={()=>setCalTab("pay")}>支払日</button>
+          <button style={S.tab(calTab==="zukan")}    onClick={()=>setCalTab("zukan")}>図鑑</button>
+        </div>
+      )}
       {tab==="calendar"&&!selectedDate&&calTab!=="zukan"&&(
         <CalendarView year={viewYear} month={viewMonth} calTab={calTab} setCalTab={setCalTab}
           dailyTotal={dailyTotal(viewYear,viewMonth)} dotDays={dotDays(viewYear,viewMonth)}
@@ -500,11 +507,6 @@ function CalendarView({year,month,calTab,setCalTab,dailyTotal,dotDays,warnCount,
         <span style={{color:warnCount>0?"#DC2626":"#0369A1",fontWeight:700}}>{warnTag} {warnCount}件</span>
         <div style={{flex:1}}/>
         <span style={{fontSize:12,color:"#94A3B8",fontWeight:400}}>{year}年{month}月</span>
-      </div>
-      <div style={S.tabs}>
-        <button style={S.tab(calTab==="purchase")} onClick={()=>setCalTab("purchase")}>購入日</button>
-        <button style={S.tab(calTab==="pay")}      onClick={()=>setCalTab("pay")}>支払日</button>
-        <button style={S.tab(calTab==="zukan")}    onClick={()=>setCalTab("zukan")}>図鑑</button>
       </div>
       <div style={S.calHeader}>
         <button style={S.calNavBtn} onClick={onPrev}>‹ 前月</button>
