@@ -5,7 +5,7 @@
 //    ここを変えることで sw.js 自体のバイト内容が変わり、ブラウザが「新しいSWがある」と検知できる。
 //    （ブラウザは sw.js を byte-for-byte 比較して更新を検知するため、中身が1文字も変わらないと
 //    　index.html だけ差し替えても新しいSWはインストールされない）
-const SW_VERSION = "1.17.2";
+const SW_VERSION = "1.17.3";
 
 const CACHE_NAME = `tomotalog-v${SW_VERSION}`;
 const CDN_CACHE  = `tomotalog-cdn-v${SW_VERSION}`;
