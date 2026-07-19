@@ -86,10 +86,10 @@ Googleタイムライン研究室で育てた成果を、
 
 ---
 
-# ドキュメント
+## 📚 ドキュメント
 
-- CHANGELOG.md
-  - バージョンごとの更新履歴
+- 📜 [CHANGELOG](CHANGELOG.md)
+  バージョンごとの更新履歴
 
-- PHILOSOPHY.md
-  - 設計思想・Version2構想・データの複利
+- 💡 [PHILOSOPHY](PHILOSOPHY.md)
+  ともたろぐ Version2 の設計思想
