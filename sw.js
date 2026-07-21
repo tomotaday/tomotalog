@@ -2,7 +2,7 @@
 // index.html = Network First / アプリシェル = Cache First / CDNスクリプト = Stale While Revalidate
 
 // ⚠️ index.html の DATA_VERSION を上げたら、必ずこの SW_VERSION も同じ値に揃えること。
-const SW_VERSION = "2.4.4";
+const SW_VERSION = "2.5.0";
 
 const CACHE_NAME = `tomotalog2-v${SW_VERSION}`;
 const CDN_CACHE  = `tomotalog2-cdn-v${SW_VERSION}`;
