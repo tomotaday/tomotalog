@@ -34,7 +34,7 @@ const { useState, useEffect, useRef, useMemo, useLayoutEffect } = React;
 // 定数・バージョン
 // ══════════════════════════════════════════════════════════════
 const APP_NAME = "ともたろぐ";
-const DATA_VERSION = "2.5.0"; // ⚠️ 上げたら sw.js の SW_VERSION も同じ値に揃えること
+const DATA_VERSION = "2.5.1"; // ⚠️ 上げたら sw.js の SW_VERSION も同じ値に揃えること
 const APP_ICON = "data:image/png;base64,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";
 
 // ── A2パレット: ターコイズ3階調 + 役割ベースの色 ──────────
@@ -193,6 +193,20 @@ const TIMELINE_DAY_SORTS = [
   { id: "recentEdited", label: "最近編集した日" },
   { id: "chronological", label: "古い順（時系列）" },
 ];
+
+// ══════════════════════════════════════════════════════════════
+// タイムライン格納庫（Ver2.5.1で新設・正式機能）
+// 研究所（timelineExperiment:*）とは名前空間・ストレージともに完全に独立させる。
+// 入力方法・表示方法・画面構成・処理の流れは研究所を踏襲するが、データは一切共有しない。
+// 場所データは持たず、正式場所図鑑（App側の統合済みplaces）をそのまま参照・登録する。
+// ══════════════════════════════════════════════════════════════
+const ARCHIVE_LS_KEYS = {
+  settings: "tomota2_archive_settings", // { importRangeStart, importRangeEnd }
+};
+const ARCHIVE_IDB_KEYS = {
+  dayStore: "placeArchive:dayStore",           // 日単位の取込データ＋完了履歴
+  importSummary: "placeArchive:importSummary", // 直近の全体JSON取込結果の集計
+};
 
 function parseGeoString(g) {
   const m = /geo:([-\d.]+),([-\d.]+)/.exec(g || "");
@@ -409,23 +423,6 @@ function migrateTimelinePlaces(rawPlaces) {
       updatedAt: p.updatedAt || p.registeredAt || Date.now(),
     };
   });
-}
-
-// ── 訪問図鑑（正式マスター）向けGoogleタイムライン取込ヘルパー（Ver2.4.3） ──
-// 研究室（timelineExperiment）とは完全に独立し、抽出結果はその場で確認のうえ createPlace() で
-// 正式な places マスターへ直接登録する。自動統合・自動更新は行わない（候補として提示するのみ）。
-function extractPlaceCandidatesFromTimeline(rawArray, existingPlaces) {
-  const visits = parseTimelineJSON(rawArray).filter(r => r.kind === "visit" && r.googlePlaceId);
-  const byId = {};
-  visits.forEach(r => {
-    if (!byId[r.googlePlaceId]) byId[r.googlePlaceId] = { googlePlaceId: r.googlePlaceId, lat: r.lat, lng: r.lng, visitTimes: [] };
-    byId[r.googlePlaceId].visitTimes.push(r.startTime);
-  });
-  return Object.values(byId).map(c => {
-    const times = [...c.visitTimes].sort();
-    const matchedPlace = existingPlaces.find(p => p.placeId === c.googlePlaceId || (p.placeIds||[]).includes(c.googlePlaceId)) || null;
-    return { ...c, firstVisit: times[0], lastVisit: times[times.length-1], visitCount: times.length, matchedPlace };
-  }).sort((a,b) => (a.matchedPlace?1:0) - (b.matchedPlace?1:0) || b.visitCount - a.visitCount);
 }
 
 // Stage1固定サンプル：実データ形式の検証用（2016-09-14夜〜09-15の実際の移動記録）
@@ -2444,236 +2441,6 @@ function PlaceAddOverlay({ places, onClose, createPlace }) {
 }
 
 // ══════════════════════════════════════════════════════════════
-// 訪問図鑑：Googleタイムラインからの取込（Ver2.4.3で新設・Ver2.4.4で不具合修正＋設計変更）
-// 研究室（研究用場所図鑑・timelineExperiment）とは登録先データは完全に独立しているが、
-// Ver2.4.4からは「研究室で取り込み済みのタイムラインデータ」を取込元として使う設計に変更した
-// （毎回同じ巨大JSONを選び直す必要をなくすため）。研究室が未取込の場合は、案内画面を必ず表示し、
-// 背景色だけの操作不能な画面にはならないようにする。
-// 状態は sourceMode で明示的に管理する： "loading" | "no-research-data" | "ready" | "pick-file" | "error"
-// candidates が0件の場合も、必ずメッセージと次の行動（別ファイルを選ぶ／閉じる）を提示する。
-// JSONから候補（Google Place ID単位に集約した訪問地点）を抽出して一覧表示するのみで、
-// 自動登録・自動統合・自動更新は行わない。候補ごとに内容を確認したうえで個別に登録する。
-// 既に訪問図鑑にPlaceIDが一致する場所がある場合も候補として表示は続けるが（隠さない）、
-// 「登録済み」であることが分かるようにし、二重登録を招く操作（タップでの新規登録）は行わせない。
-// 何度でも読み込み直せる。
-// ══════════════════════════════════════════════════════════════
-function PlaceTimelineImportOverlay({ places, onClose, createPlace, showToast, onNavigateToTimelineLab }) {
-  const [sourceMode, setSourceMode] = useState("loading");
-  const [candidates, setCandidates] = useState([]);
-  const [sourceLabel, setSourceLabel] = useState(null); // 表示用の取込元説明
-  const [importing, setImporting] = useState(false);
-  const [confirmTarget, setConfirmTarget] = useState(null);
-  const fileInputRef = useRef();
-
-  const buildFromRawArray = (rawArray) => {
-    const list = extractPlaceCandidatesFromTimeline(rawArray, places);
-    setCandidates(list);
-    return list;
-  };
-
-  // 起動時：研究室（timelineExperiment:dayStore）に取込済みデータがあれば、それを取込元として使う
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const store = await idbGet(TIMELINE_IDB_KEYS.dayStore).catch(() => null);
-        if (cancelled) return;
-        const days = store && typeof store === "object" ? Object.keys(store) : [];
-        if (days.length === 0) { setSourceMode("no-research-data"); return; }
-        const rawArray = days.flatMap(d => currentEntryOf(store[d])?.records || []);
-        if (rawArray.length === 0) { setSourceMode("no-research-data"); return; }
-        buildFromRawArray(rawArray);
-        setSourceLabel(`研究室の取込データ（${days.length}日分）`);
-        setSourceMode("ready");
-      } catch (e) {
-        // 想定外の読み込み失敗時も、必ず案内画面へフォールバックする（背景だけになることを防ぐ）
-        setSourceMode("no-research-data");
-      }
-    })();
-    return () => { cancelled = true; };
-  }, []);
-
-  const onPickFile = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setImporting(true);
-    try {
-      const text = await readFileAsText(file);
-      const parsed = JSON.parse(text);
-      const rawArray = extractTimelineRawRecords(parsed);
-      if (!rawArray) throw new Error("unsupported-shape");
-      buildFromRawArray(rawArray);
-      setSourceLabel(`選択したファイル：${file.name}`);
-      setSourceMode("ready");
-    } catch (err) {
-      showToast(err && err.message === "unsupported-shape"
-        ? "対応していないJSON形式です（semanticSegments形式のファイルをお試しください）"
-        : "JSONの読み込みに失敗しました");
-    } finally {
-      setImporting(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
-    }
-  };
-
-  const markRegistered = (googlePlaceId, place) => {
-    setCandidates(prev => prev.map(c => c.googlePlaceId === googlePlaceId ? { ...c, matchedPlace: place } : c));
-  };
-
-  const unregisteredCount = candidates.filter(c => !c.matchedPlace).length;
-
-  return (
-    <div style={{ position:"fixed", inset:0, background:C.bg, zIndex:235, display:"flex", flexDirection:"column" }}>
-      <SubHeader title="Googleタイムラインから取り込む" onBack={onClose} />
-      <div style={{ flex:1, overflowY:"auto", padding:"16px 16px 100px" }}>
-
-        {sourceMode === "loading" && (
-          <div style={{ textAlign:"center", color:C.textFaint, fontSize:13, padding:"60px 0" }}>読み込み中…</div>
-        )}
-
-        {sourceMode === "no-research-data" && (
-          <div style={{ textAlign:"center", padding:"40px 16px" }}>
-            <div style={{ fontSize:28, marginBottom:14 }}>🛰</div>
-            <div style={{ fontSize:13.5, color:C.textSecondary, lineHeight:1.8, marginBottom:24 }}>
-              取込可能なタイムラインデータがありません。<br />先にGoogleタイムライン研究室でJSONを取り込んでください。
-            </div>
-            <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
-              {onNavigateToTimelineLab && (
-                <button onClick={onNavigateToTimelineLab} style={{ padding:"13px 0", borderRadius:12, border:"none", background:C.accentDeep, color:"#fff", fontSize:14, fontWeight:700, cursor:"pointer" }}>
-                  研究室へ移動
-                </button>
-              )}
-              <label style={{ padding:"13px 0", borderRadius:12, border:`1px solid ${C.accentDeep}`, background: importing?C.accentLight:"#fff", color:C.accentDeep, fontSize:13.5, fontWeight:700, cursor: importing?"default":"pointer" }}>
-                {importing ? "読込中…" : "JSONファイルを直接選ぶ"}
-                <input ref={fileInputRef} type="file" accept=".json,application/json" onChange={onPickFile} disabled={importing} style={{ display:"none" }} />
-              </label>
-              <button onClick={onClose} style={{ padding:"13px 0", borderRadius:12, border:"none", background:"none", color:C.textSecondary, fontSize:13.5, fontWeight:700, cursor:"pointer" }}>
-                閉じる
-              </button>
-            </div>
-          </div>
-        )}
-
-        {sourceMode === "ready" && (
-          <>
-            <div style={{ fontSize:11.5, color:C.textFaint, background:C.card, border:`1px dashed ${C.border}`, borderRadius:10, padding:"10px 12px", marginBottom:16 }}>
-              取り込むだけでは登録されません。内容を確認して、候補ごとに個別に登録してください。
-            </div>
-            <div style={{ fontSize:11, color:C.textSecondary, background:C.card, border:`1px solid ${C.border}`, borderRadius:10, padding:"10px 12px", marginBottom:10 }}>
-              <div style={{ fontWeight:700, marginBottom:2 }}>{sourceLabel}</div>
-              <div>候補 {candidates.length}件　・　未登録 {unregisteredCount}件</div>
-            </div>
-            <label style={{ display:"inline-block", background:"none", border:"none", color:C.accentDeep, fontSize:12, fontWeight:700, cursor: importing?"default":"pointer", padding:0, marginBottom:14 }}>
-              {importing ? "読込中…" : "別のJSONファイルを直接選ぶ"}
-              <input ref={fileInputRef} type="file" accept=".json,application/json" onChange={onPickFile} disabled={importing} style={{ display:"none" }} />
-            </label>
-
-            {candidates.length === 0 && (
-              <div style={{ textAlign:"center", color:C.textFaint, fontSize:13, padding:"40px 0" }}>
-                取込可能な訪問地点が見つかりませんでした。
-              </div>
-            )}
-
-            {candidates.map(c => (
-              <div key={c.googlePlaceId} onClick={()=>!c.matchedPlace && setConfirmTarget(c)} style={{
-                padding:"12px 14px", borderRadius:12, marginBottom:8, cursor: c.matchedPlace?"default":"pointer",
-                background: c.matchedPlace ? C.card : C.warnLight, border:`1px solid ${c.matchedPlace ? C.border : C.warn}`,
-              }}>
-                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
-                  <div>
-                    <div style={{ fontSize:13, fontWeight:700, color: c.matchedPlace?C.textPrimary:C.warn }}>
-                      {c.matchedPlace ? `✓ 登録済み：${placeFullLabel(c.matchedPlace)}` : "📍 未登録の候補"}
-                    </div>
-                    <div style={{ fontSize:10.5, color:C.textFaint, marginTop:3 }}>
-                      初回訪問 {fmtDateTime(c.firstVisit)}　・　訪問{c.visitCount}回　・　PlaceID: {c.googlePlaceId.slice(0,18)}…
-                    </div>
-                  </div>
-                  {!c.matchedPlace && <span style={{ fontSize:11, fontWeight:700, color:C.warn, whiteSpace:"nowrap" }}>登録 ›</span>}
-                </div>
-              </div>
-            ))}
-          </>
-        )}
-      </div>
-
-      {confirmTarget && (
-        <PlaceTimelineCandidateOverlay candidate={confirmTarget} onClose={()=>setConfirmTarget(null)}
-          onSave={(form) => {
-            const p = createPlace({ ...form, placeId: confirmTarget.googlePlaceId, lat: confirmTarget.lat, lng: confirmTarget.lng });
-            markRegistered(confirmTarget.googlePlaceId, p);
-            setConfirmTarget(null);
-            showToast("訪問図鑑に登録しました");
-          }} />
-      )}
-    </div>
-  );
-}
-
-// ── 候補の内容確認・新規登録（訪問日時は参考情報として表示のみ） ──
-function PlaceTimelineCandidateOverlay({ candidate, onClose, onSave }) {
-  const [category, setCategory] = useState("");
-  const [brand, setBrand] = useState("");
-  const [place, setPlace] = useState("");
-  const [favorite, setFavorite] = useState(false);
-  const canSave = category.trim() && brand.trim();
-
-  return (
-    <div style={{ position:"fixed", inset:0, background:C.bg, zIndex:270, display:"flex", flexDirection:"column" }}>
-      <SubHeader title="内容確認・登録" onBack={onClose} />
-      <div style={{ flex:1, overflowY:"auto", padding:"16px 16px 110px" }}>
-        <div style={{ background:C.accentLight, borderRadius:12, padding:"12px 14px", marginBottom:18 }}>
-          <div style={{ fontSize:11, fontWeight:700, color:C.accentDeep, marginBottom:6 }}>訪問日時（参考情報）</div>
-          {[
-            ["初回訪問", fmtDateTime(candidate.firstVisit)],
-            ["最終訪問", fmtDateTime(candidate.lastVisit)],
-            ["訪問回数（このJSON内）", `${candidate.visitCount}回`],
-          ].map(([k,v]) => (
-            <div key={k} style={{ display:"flex", justifyContent:"space-between", fontSize:12, padding:"3px 0", color:C.textPrimary }}>
-              <span style={{ color:C.accentMidText }}>{k}</span><span style={{ fontWeight:600 }}>{v}</span>
-            </div>
-          ))}
-        </div>
-
-        <label style={{ fontSize:11.5, fontWeight:700, color:C.textSecondary }}>大分類</label>
-        <input value={category} onChange={e=>setCategory(e.target.value)} placeholder="例：コンビニ、ホテル、公園"
-          style={{ width:"100%", padding:"11px 13px", borderRadius:10, border:`1px solid ${C.border}`, fontSize:14, margin:"6px 0 16px", background:"#fff" }} />
-
-        <label style={{ fontSize:11.5, fontWeight:700, color:C.textSecondary }}>名称</label>
-        <input value={brand} onChange={e=>setBrand(e.target.value)} placeholder="Googleマップ等で確認した名称を入力"
-          style={{ width:"100%", padding:"11px 13px", borderRadius:10, border:`1px solid ${C.border}`, fontSize:14, margin:"6px 0 16px", background:"#fff" }} />
-
-        <label style={{ fontSize:11.5, fontWeight:700, color:C.textSecondary }}>支店名（任意）</label>
-        <input value={place} onChange={e=>setPlace(e.target.value)} placeholder="複数店舗がある場合のみ"
-          style={{ width:"100%", padding:"11px 13px", borderRadius:10, border:`1px solid ${C.border}`, fontSize:14, margin:"6px 0 16px", background:"#fff" }} />
-
-        <label style={{ display:"flex", alignItems:"center", gap:8, fontSize:13, color:C.textSecondary, cursor:"pointer" }}>
-          <input type="checkbox" checked={favorite} onChange={e=>setFavorite(e.target.checked)} />
-          ★ お気に入りに登録する
-        </label>
-
-        <div style={{ borderTop:`1px solid ${C.border}`, paddingTop:14, marginTop:20 }}>
-          <div style={{ fontSize:11, fontWeight:700, color:C.textSecondary, marginBottom:6 }}>JSONから自動保存（編集不可）</div>
-          {[
-            ["Google Place ID", candidate.googlePlaceId],
-            ["緯度", candidate.lat ?? "-"],
-            ["経度", candidate.lng ?? "-"],
-          ].map(([k,v]) => (
-            <div key={k} style={{ display:"flex", justifyContent:"space-between", fontSize:12, padding:"5px 0", color:C.textFaint }}>
-              <span>{k}</span><span style={{ color:C.textSecondary }}>{v}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-      <div style={{ position:"fixed", left:0, right:0, bottom:0, maxWidth:430, margin:"0 auto", padding:"12px 16px calc(12px + env(safe-area-inset-bottom))", background:C.bg, borderTop:`1px solid ${C.border}` }}>
-        <button onClick={()=>onSave({ category:category.trim(), brand:brand.trim(), place: place.trim()||null, favorite })} disabled={!canSave}
-          style={{ width:"100%", padding:"14px 0", borderRadius:12, border:"none", background:C.accentDeep, color:"#fff", fontSize:15, fontWeight:700, cursor:"pointer", opacity: canSave?1:0.4 }}>
-          訪問図鑑に登録する
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// ══════════════════════════════════════════════════════════════
 // STEP1: 仮保存（高速入力） ── クイック追加オーバーレイ
 // ══════════════════════════════════════════════════════════════
 function QuickAddOverlay({ onClose, places, settings, tags, addItemToReceipt, createPlace, createTag, presetDate, initialReceipt }) {
@@ -3346,7 +3113,7 @@ function PlaceFormalRegisterOverlay({ visit, allVisits, existingPlace, onClose, 
 }
 
 // ── 縦タイムライン＋滞在カード（1日分） ──
-function TimelineDayView({ day, dayBucket, records, places, dayKeys, onChangeDay, onClose, onRegister, onReimportDay, isSample, reimporting }) {
+function TimelineDayView({ title="Googleタイムライン研究", day, dayBucket, records, places, dayKeys, onChangeDay, onClose, onRegister, onReimportDay, isSample, reimporting }) {
   const idx = dayKeys.indexOf(day);
   const resolvePlace = (googlePlaceId) => places.find(p => (p.placeIds||[]).includes(googlePlaceId)) || null;
   const [showHistory, setShowHistory] = useState(false);
@@ -3356,7 +3123,7 @@ function TimelineDayView({ day, dayBucket, records, places, dayKeys, onChangeDay
 
   return (
     <div style={{ position:"fixed", inset:0, background:C.bg, zIndex:255, display:"flex", flexDirection:"column" }}>
-      <SubHeader title="Googleタイムライン研究" onBack={onClose} />
+      <SubHeader title={title} onBack={onClose} />
       <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"10px 16px", borderBottom:`1px solid ${C.border}` }}>
         <button onClick={()=>idx>0 && onChangeDay(dayKeys[idx-1])} disabled={idx<=0} style={{ background:"none", border:"none", fontSize:14, color: idx<=0?C.textFaint:C.accentDeep, cursor: idx<=0?"default":"pointer", fontWeight:700 }}>‹ 前日</button>
         <div style={{ fontSize:14, fontWeight:800, color:C.textPrimary, display:"flex", alignItems:"center", gap:6 }}>
@@ -3432,7 +3199,7 @@ function TimelineDayView({ day, dayBucket, records, places, dayKeys, onChangeDay
                       <span style={{ display:"inline-block", fontSize:10, fontWeight:700, color:C.accentDeep, background:C.accentLight, borderRadius:99, padding:"2px 8px", marginBottom:4 }}>前日から滞在</span>
                     )}
                     <div style={{ fontSize:14, fontWeight:800, color: place?C.textPrimary:C.warn }}>
-                      {place ? `${place.category?`${place.category}・`:""}${place.brand}${place.place?`（${place.place}）`:""}` : "📍 未登録の場所"}
+                      {place ? `${place.category?`${place.category}・`:""}${place.brand}${(place.place||place.branch)?`（${place.place||place.branch}）`:""}` : "📍 未登録の場所"}
                     </div>
                     {place && place.googleCategory && (
                       <div style={{ fontSize:10.5, color:C.accentDeep, marginTop:1 }}>{place.googleCategory}</div>
@@ -3454,9 +3221,100 @@ function TimelineDayView({ day, dayBucket, records, places, dayKeys, onChangeDay
 }
 
 // ── Googleタイムライン研究室（入口） ──
-// Ver2.5.0：研究室固有の場所図鑑（timelineExperiment:places）は廃止し、正式場所図鑑（App側の統合済みplaces）を
-// props経由でそのまま利用する。「正式登録」時の実際の保存処理は onRegisterPlace（App側）に委譲する。
-function TimelineLabScreen({ onClose, showToast, places, onRegisterPlace }) {
+// Ver2.5.1：研究所は「完全に隔離された実験区域」という原則を再徹底する。Ver2.5.0で一時的に
+// 正式場所図鑑（App側places）へ直接書き込む形にしていたが、これを撤回し、研究所専用の
+// 独立ストレージ（timelineExperiment:places・IndexedDB）へ戻した。研究所で何が起きても
+// 本体（訪問図鑑・正式データ）には一切影響しない。正式な生活ログ用の取込・登録は
+// 「タイムライン格納庫」（PlaceArchiveScreen・Ver2.5.1で新設）を使うこと。
+// ══════════════════════════════════════════════════════════════
+// 研究所専用・簡易登録オーバーレイ（Ver2.5.1）
+// 完全に隔離された研究所内のplacesにのみ保存する。正式場所図鑑とは一切データを共有しない。
+// ══════════════════════════════════════════════════════════════
+function TimelineLabRegisterOverlay({ visit, allVisits, onClose, onSave }) {
+  const [category, setCategory] = useState("");
+  const [brand, setBrand] = useState("");
+  const [branch, setBranch] = useState("");
+  const [googleCategory, setGoogleCategory] = useState(isUsableGoogleCategory(visit.sourceGoogleCategory) ? visit.sourceGoogleCategory : "");
+
+  const sameIdVisits = allVisits.filter(v => v.googlePlaceId === visit.googlePlaceId);
+  const firstVisit = sameIdVisits.reduce((a,v) => !a || v.startTime < a ? v.startTime : a, null);
+  const lastVisit = sameIdVisits.reduce((a,v) => !a || v.startTime > a ? v.startTime : a, null);
+
+  return (
+    <div style={{ position:"fixed", inset:0, background:C.bg, zIndex:260, display:"flex", flexDirection:"column" }}>
+      <SubHeader title="研究用場所図鑑へ登録" onBack={onClose} />
+      <div style={{ flex:1, overflowY:"auto", padding:"16px 16px 110px" }}>
+        <div style={{ fontSize:11.5, color:C.textFaint, background:C.card, border:`1px dashed ${C.border}`, borderRadius:10, padding:"10px 12px", marginBottom:16 }}>
+          この登録は研究所内だけの検証用データです。正式場所図鑑（訪問図鑑）には反映されません。
+        </div>
+
+        <div style={{ background:C.accentLight, borderRadius:12, padding:"12px 14px", marginBottom:18 }}>
+          <div style={{ fontSize:11, fontWeight:700, color:C.accentDeep, marginBottom:6 }}>登録補助（店名を思い出す手がかり）</div>
+          {[
+            ["訪問日時", `${fmtDateTime(visit.startTime)} 〜 ${fmtDateTime(visit.endTime)}`],
+            ["滞在時間", durationLabel(visit.startTime, visit.endTime)],
+            ["初回訪問日", firstVisit ? fmtDateTime(firstVisit) : "-"],
+            ["最終訪問日", lastVisit ? fmtDateTime(lastVisit) : "-"],
+            ["訪問回数（取込済みデータ内）", `${sameIdVisits.length}回`],
+          ].map(([k,v]) => (
+            <div key={k} style={{ display:"flex", justifyContent:"space-between", fontSize:12, padding:"3px 0", color:C.textPrimary }}>
+              <span style={{ color:C.accentMidText }}>{k}</span><span style={{ fontWeight:600 }}>{v}</span>
+            </div>
+          ))}
+        </div>
+
+        <label style={{ fontSize:11.5, fontWeight:700, color:C.textSecondary }}>分類（ともた分類・任意）</label>
+        <input value={category} onChange={e=>setCategory(e.target.value)} placeholder="例：ホテル・飲食店・商業施設"
+          style={{ width:"100%", padding:"11px 13px", borderRadius:10, border:`1px solid ${C.border}`, fontSize:14, margin:"6px 0 16px", background:"#fff" }} />
+
+        <label style={{ fontSize:11.5, fontWeight:700, color:C.textSecondary }}>店名</label>
+        <input value={brand} onChange={e=>setBrand(e.target.value)} placeholder="例：さえら"
+          style={{ width:"100%", padding:"11px 13px", borderRadius:10, border:`1px solid ${C.border}`, fontSize:14, margin:"6px 0 16px", background:"#fff" }} />
+
+        <label style={{ fontSize:11.5, fontWeight:700, color:C.textSecondary }}>支店名（任意）</label>
+        <input value={branch} onChange={e=>setBranch(e.target.value)} placeholder="例：本店"
+          style={{ width:"100%", padding:"11px 13px", borderRadius:10, border:`1px solid ${C.border}`, fontSize:14, margin:"6px 0 16px", background:"#fff" }} />
+
+        <label style={{ fontSize:11.5, fontWeight:700, color:C.textSecondary }}>Google分類</label>
+        <input value={googleCategory} onChange={e=>setGoogleCategory(e.target.value)} placeholder="例：カフェ・ケーキ店・中華料理店・ホテル"
+          style={{ width:"100%", padding:"11px 13px", borderRadius:10, border:`1px solid ${C.border}`, fontSize:14, margin:"6px 0 4px", background:"#fff" }} />
+        <div style={{ fontSize:10.5, color:C.textFaint, marginBottom:20 }}>
+          {isUsableGoogleCategory(visit.sourceGoogleCategory)
+            ? `JSONの値から自動入力しています（元の値：${visit.sourceGoogleCategory}）。違和感がなければそのまま、必要なら修正してください。`
+            : visit.sourceGoogleCategory
+              ? `JSON内の値は「${visit.sourceGoogleCategory}」で利用できなかったため未入力です。Googleマップ上の業種を見て手入力してください。`
+              : "JSON内に分類値がありませんでした。Googleマップ上の業種を見て手入力してください。"}
+        </div>
+
+        <div style={{ borderTop:`1px solid ${C.border}`, paddingTop:14 }}>
+          <div style={{ fontSize:11, fontWeight:700, color:C.textSecondary, marginBottom:6 }}>JSONから自動保存（編集不可）</div>
+          {[
+            ["Google Place ID", visit.googlePlaceId || "-"],
+            ["緯度", visit.lat ?? "-"],
+            ["経度", visit.lng ?? "-"],
+          ].map(([k,v]) => (
+            <div key={k} style={{ display:"flex", justifyContent:"space-between", fontSize:12, padding:"5px 0", color:C.textFaint }}>
+              <span>{k}</span><span style={{ color:C.textSecondary }}>{v}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div style={{ position:"fixed", left:0, right:0, bottom:0, maxWidth:430, margin:"0 auto", padding:"12px 16px calc(12px + env(safe-area-inset-bottom))", background:C.bg, borderTop:`1px solid ${C.border}` }}>
+        <button onClick={()=>onSave({ category, brand, branch, googleCategory: googleCategory.trim() || null, sourceGoogleCategory: visit.sourceGoogleCategory || null })} disabled={!brand.trim()}
+          style={{ width:"100%", padding:"14px 0", borderRadius:12, border:"none", background:C.accentDeep, color:"#fff", fontSize:15, fontWeight:700, cursor:"pointer", opacity: brand.trim()?1:0.4 }}>
+          研究用場所図鑑に登録する
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ── Googleタイムライン研究室（入口） ──
+// Ver2.5.1：研究所は完全に隔離された実験区域。ここでの登録・データはすべて研究所内で完結し、
+// 正式場所図鑑（訪問図鑑）とは一切やり取りしない。正式な生活ログの取込・登録は
+// タイムライン格納庫（PlaceArchiveScreen）を使う。
+function TimelineLabScreen({ onClose, showToast }) {
+  const [places, setPlaces] = useState([]);
   const [dayStore, setDayStore] = useState({});
   const [importSummary, setImportSummary] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -3479,9 +3337,15 @@ function TimelineLabScreen({ onClose, showToast, places, onRegisterPlace }) {
 
   useEffect(() => {
     (async () => {
-      const store = await migrateTimelineDayStoreOnLoad();
+      const [rawPlaces, store] = await Promise.all([
+        idbGet(TIMELINE_IDB_KEYS.places).catch(()=>null),
+        migrateTimelineDayStoreOnLoad(),
+      ]);
+      const migratedPlaces = migrateTimelinePlaces(rawPlaces || []);
+      if (JSON.stringify(migratedPlaces) !== JSON.stringify(rawPlaces || [])) await idbSet(TIMELINE_IDB_KEYS.places, migratedPlaces);
+      setPlaces(migratedPlaces);
       const now = Date.now();
-      const recomputedStore = recomputeAllDayMeta(store, places, now);
+      const recomputedStore = recomputeAllDayMeta(store, migratedPlaces, now);
       setDayStore(recomputedStore);
       if (JSON.stringify(recomputedStore) !== JSON.stringify(store)) await idbSet(TIMELINE_IDB_KEYS.dayStore, recomputedStore);
       const summary = await idbGet(TIMELINE_IDB_KEYS.importSummary).catch(()=>null);
@@ -3527,7 +3391,12 @@ function TimelineLabScreen({ onClose, showToast, places, onRegisterPlace }) {
   const handleRegister = async (form) => {
     const visit = registerTarget;
     const now = Date.now();
-    const nextPlaces = onRegisterPlace(visit, form); // App側：正式場所図鑑（統合済みplaces）へ直接保存
+    const already = places.find(p => (p.placeIds||[]).includes(visit.googlePlaceId));
+    const nextPlaces = already
+      ? places.map(p => p.id === already.id ? { ...p, ...form, updatedAt: now } : p)
+      : [...places, { id: uid("tlp"), placeIds:[visit.googlePlaceId], lat: visit.lat, lng: visit.lng, ...form, registeredAt: now, updatedAt: now }];
+    setPlaces(nextPlaces);
+    await idbSet(TIMELINE_IDB_KEYS.places, nextPlaces);
 
     let newlyCompletedCount = 0;
     if (!isSample) {
@@ -3540,21 +3409,23 @@ function TimelineLabScreen({ onClose, showToast, places, onRegisterPlace }) {
     }
     setRegisterTarget(null);
     showToast(newlyCompletedCount > 1
-      ? `正式場所図鑑に登録しました。同じPlace IDの記録が一気に反映され、${newlyCompletedCount}日分が完了になりました`
-      : "正式場所図鑑に登録しました。同じPlace IDの記録すべてに反映されます");
+      ? `研究用場所図鑑に登録しました。同じPlace IDの記録が一気に反映され、${newlyCompletedCount}日分が完了になりました`
+      : "研究用場所図鑑に登録しました。同じPlace IDの記録すべてに反映されます");
   };
 
   const executeReset = async () => {
-    // Ver2.5.0：正式場所図鑑（統合済みplaces）はここでは一切操作しない。ここで初期化するのは
-    // タイムラインJSONの取込データ（dayStore・全体取込結果）のみ。
+    // Ver2.5.1：研究所は完全に隔離された実験区域のため、ここでのリセットは研究所専用の
+    // 場所データ（timelineExperiment:places）も含めてすべて初期化する。正式場所図鑑には一切影響しない。
+    await idbDelete(TIMELINE_IDB_KEYS.places);
     await idbDelete(TIMELINE_IDB_KEYS.dayStore);
     await idbDelete(TIMELINE_IDB_KEYS.importSummary);
     await idbDelete(TIMELINE_IDB_KEYS.rawRecordsLegacy);
+    setPlaces([]);
     setDayStore({});
     setImportSummary(null);
     setDayView(null);
     setConfirmReset(false);
-    showToast("タイムライン取込データを初期化しました（正式場所図鑑のデータは影響を受けません）");
+    showToast("研究データを初期化しました（正式場所図鑑には影響しません）");
   };
 
   const executeDeleteJson = async () => {
@@ -3662,8 +3533,7 @@ function TimelineLabScreen({ onClose, showToast, places, onRegisterPlace }) {
           onChangeDay={setDayView} onClose={()=>setDayView(null)} onRegister={setRegisterTarget}
           onReimportDay={onReimportDay} isSample={isSample} reimporting={reimporting && reimportTargetDay===dayView} />
         {registerTarget && (
-          <PlaceFormalRegisterOverlay visit={registerTarget} allVisits={allVisits}
-            existingPlace={places.find(p => (p.placeIds||[]).includes(registerTarget.googlePlaceId)) || null}
+          <TimelineLabRegisterOverlay visit={registerTarget} allVisits={allVisits}
             onClose={()=>setRegisterTarget(null)} onSave={handleRegister} />
         )}
       </>
@@ -3675,7 +3545,7 @@ function TimelineLabScreen({ onClose, showToast, places, onRegisterPlace }) {
       <SubHeader title="🛰 Googleタイムライン研究室" onBack={onClose} />
       <div style={{ padding:"16px 0" }}>
         <div style={{ fontSize:11.5, color:C.textFaint, background:C.card, border:`1px dashed ${C.border}`, borderRadius:10, padding:"10px 12px", marginBottom:12 }}>
-          タイムラインの記録を確認しながら「正式登録」すると、正式場所図鑑（訪問図鑑）へそのまま登録されます。取込データ自体（日ごとの記録・完了状態）は研究室側で管理します。
+          正式な生活ログ・訪問図鑑とは完全に分離した検証用データです。目的は「場所図鑑を育てる」体験を検証することです。正式な取込・登録は「タイムライン格納庫」（訪問図鑑画面から開けます）をご利用ください。
         </div>
 
         {isSample && (
@@ -3780,21 +3650,376 @@ function TimelineLabScreen({ onClose, showToast, places, onRegisterPlace }) {
         })}
 
         <div style={{ borderTop:`1px solid ${C.border}`, marginTop:20, paddingTop:16 }}>
-          <div style={{ fontSize:11.5, color:C.textFaint, marginBottom:10 }}>
-            正式登録済みの場所は訪問図鑑（正式場所図鑑）側で確認できます。現在{loading?"…":places.length}件登録されています。
-          </div>
-          <button onClick={()=>setConfirmReset(true)} style={{ marginTop:4, background:"none", border:"none", color:C.danger, fontSize:12.5, fontWeight:700, cursor:"pointer" }}>タイムライン取込データを初期化する</button>
+          <div style={{ fontSize:12, fontWeight:700, color:C.textSecondary, marginBottom:8 }}>研究用場所図鑑（{loading?"…":places.length}件・研究所内だけの検証用データ）</div>
+          {!loading && places.map(p => (
+            <div key={p.id} style={{ padding:"9px 12px", background:C.card, borderRadius:10, marginBottom:6, fontSize:12.5 }}>
+              {p.category?`${p.category}・`:""}{p.brand}{p.branch?`（${p.branch}）`:""}
+              {p.googleCategory && <span style={{ marginLeft:6, fontSize:10.5, color:C.accentDeep }}>[{p.googleCategory}]</span>}
+              <div style={{ color:C.textFaint, fontSize:10.5, marginTop:2 }}>{(p.placeIds||[]).join("、 ")}</div>
+            </div>
+          ))}
+          {!loading && places.length === 0 && <div style={{ fontSize:12, color:C.textFaint }}>まだ登録がありません</div>}
+
+          <button onClick={()=>setConfirmReset(true)} style={{ marginTop:14, background:"none", border:"none", color:C.danger, fontSize:12.5, fontWeight:700, cursor:"pointer" }}>研究データを初期化する（取込データ・場所図鑑をすべて削除）</button>
         </div>
       </div>
 
       {confirmReset && (
-        <ConfirmDialog title="タイムライン取込データを初期化しますか？"
+        <ConfirmDialog title="研究データを初期化しますか？"
+          message="研究用場所図鑑・取込済みのタイムラインデータ（履歴を含む）がすべて削除されます。正式な生活ログ・場所図鑑には影響しません。元に戻せません。"
+          onCancel={()=>setConfirmReset(false)} onConfirm={executeReset} />
+      )}
+      {confirmDeleteJson && (
+        <ConfirmDialog title="取込済みのタイムラインデータを削除しますか？"
+          message="取り込んだGoogleタイムラインデータ（履歴を含む）が削除され、固定サンプルの表示に戻ります。研究用場所図鑑は削除されません。元に戻せません。"
+          onCancel={()=>setConfirmDeleteJson(false)} onConfirm={executeDeleteJson} />
+      )}
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════
+// タイムライン格納庫（Ver2.5.1・正式機能）
+// 研究所と入力方法・表示方法・画面構成・処理の流れは同じだが、ストレージは完全に独立（ARCHIVE_IDB_KEYS）。
+// 場所データは持たず、正式場所図鑑（App側の統合済みplaces）をそのまま参照する。
+// 未登録地点の正式登録は、正式場所登録画面（PlaceFormalRegisterOverlay）を使い、訪問図鑑へ直接保存する。
+// タイムライン格納庫自身は「一日の生活履歴」の表示だけに徹し、場所の管理（名前変更・分類変更・お気に入り等）は
+// 訪問図鑑側で行う（表示時にPlaceID→訪問図鑑を参照するので、訪問図鑑側の変更は自動で反映される）。
+// ══════════════════════════════════════════════════════════════
+function PlaceArchiveScreen({ onClose, showToast, places, onRegisterPlace, onOpenPlaces }) {
+  const [dayStore, setDayStore] = useState({});
+  const [importSummary, setImportSummary] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [dayView, setDayView] = useState(null); // 選択中の日付
+  const [registerTarget, setRegisterTarget] = useState(null);
+  const [confirmReset, setConfirmReset] = useState(false);
+  const [confirmDeleteJson, setConfirmDeleteJson] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [reimporting, setReimporting] = useState(false);
+  const [reimportTargetDay, setReimportTargetDay] = useState(null);
+  const [importRange, setImportRange] = useState(() => loadLS(ARCHIVE_LS_KEYS.settings, {}) && {
+    startDate: loadLS(ARCHIVE_LS_KEYS.settings, {}).importRangeStart ?? TIMELINE_DEFAULT_IMPORT_RANGE_START,
+    endDate: loadLS(ARCHIVE_LS_KEYS.settings, {}).importRangeEnd ?? null,
+  });
+  const [sortId, setSortId] = useState("default");
+  const [onlyUnregistered, setOnlyUnregistered] = useState(false);
+  const [expandedYears, setExpandedYears] = useState(() => new Set());
+  const [expandedMonths, setExpandedMonths] = useState(() => new Set());
+  const jsonInputRef = useRef();
+
+  useEffect(() => {
+    (async () => {
+      const store = await idbGet(ARCHIVE_IDB_KEYS.dayStore).catch(()=>null) || {};
+      const now = Date.now();
+      const recomputedStore = recomputeAllDayMeta(store, places, now);
+      setDayStore(recomputedStore);
+      if (JSON.stringify(recomputedStore) !== JSON.stringify(store)) await idbSet(ARCHIVE_IDB_KEYS.dayStore, recomputedStore);
+      const summary = await idbGet(ARCHIVE_IDB_KEYS.importSummary).catch(()=>null);
+      setImportSummary(summary || null);
+      setLoading(false);
+    })();
+  }, []);
+
+  const updateImportRange = (patch) => {
+    setImportRange(prev => {
+      const next = { ...prev, ...patch };
+      saveLS(ARCHIVE_LS_KEYS.settings, { importRangeStart: next.startDate || null, importRangeEnd: next.endDate || null });
+      return next;
+    });
+  };
+
+  const dayKeys = useMemo(() => Object.keys(dayStore).sort(), [dayStore]);
+  const dayInfo = useMemo(() => {
+    const info = {};
+    dayKeys.forEach(d => { const b = dayStore[d]; info[d] = { unregisteredCount: b._unregisteredCount ?? 0, totalVisits: b._totalVisits ?? 0, meta: b.meta }; });
+    return info;
+  }, [dayKeys, dayStore]);
+  const tree = useMemo(() => buildTimelineTree(dayKeys, dayInfo, sortId, onlyUnregistered), [dayKeys, dayInfo, sortId, onlyUnregistered]);
+  const allCurrentRawRecords = useMemo(() => dayKeys.flatMap(d => currentEntryOf(dayStore[d])?.records || []), [dayKeys, dayStore]);
+  const allParsedRecords = useMemo(() => parseTimelineJSON(allCurrentRawRecords), [allCurrentRawRecords]);
+  const byDay = useMemo(() => groupTimelineByDay(allParsedRecords), [allParsedRecords]);
+  const allVisits = useMemo(() => allParsedRecords.filter(r => r.kind === "visit"), [allParsedRecords]);
+
+  const toggleYear = (y) => setExpandedYears(prev => { const n = new Set(prev); n.has(y) ? n.delete(y) : n.add(y); return n; });
+  const toggleMonth = (m) => setExpandedMonths(prev => { const n = new Set(prev); n.has(m) ? n.delete(m) : n.add(m); return n; });
+
+  const handleRegister = async (form) => {
+    const visit = registerTarget;
+    const now = Date.now();
+    const nextPlaces = onRegisterPlace(visit, form); // App側：正式場所図鑑（統合済みplaces）へ直接保存
+
+    let newlyCompletedCount = 0;
+    const nextStore = recomputeAllDayMeta(dayStore, nextPlaces, now);
+    Object.entries(nextStore).forEach(([d, b]) => {
+      if (b.meta.currentlyComplete && !(dayStore[d]?.meta?.currentlyComplete)) newlyCompletedCount++;
+    });
+    setDayStore(nextStore);
+    await idbSet(ARCHIVE_IDB_KEYS.dayStore, nextStore);
+    setRegisterTarget(null);
+    showToast(newlyCompletedCount > 1
+      ? `正式場所図鑑に登録しました。同じPlace IDの記録が一気に反映され、${newlyCompletedCount}日分が完了になりました`
+      : "正式場所図鑑に登録しました。同じPlace IDの記録すべてに反映されます");
+  };
+
+  const executeReset = async () => {
+    // タイムライン格納庫のリセットは、取込データ（dayStore・全体取込結果）のみを対象とする。
+    // 正式場所図鑑（訪問図鑑）のデータは一切操作しない。
+    await idbDelete(ARCHIVE_IDB_KEYS.dayStore);
+    await idbDelete(ARCHIVE_IDB_KEYS.importSummary);
+    setDayStore({});
+    setImportSummary(null);
+    setDayView(null);
+    setConfirmReset(false);
+    showToast("タイムライン格納庫の取込データを初期化しました（正式場所図鑑のデータは影響を受けません）");
+  };
+
+  const executeDeleteJson = async () => {
+    await idbDelete(ARCHIVE_IDB_KEYS.dayStore);
+    await idbDelete(ARCHIVE_IDB_KEYS.importSummary);
+    setDayStore({});
+    setImportSummary(null);
+    setDayView(null);
+    setConfirmDeleteJson(false);
+    if (jsonInputRef.current) jsonInputRef.current.value = "";
+    showToast("取込済みのタイムラインデータをすべて削除しました");
+  };
+
+  // 全体JSON取込：指定期間内のみを対象とし、既存日（すでにcurrentエントリがある日）は上書きしない
+  const onPickJsonFile = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImporting(true);
+    try {
+      const text = await readFileAsText(file);
+      const parsed = JSON.parse(text);
+      const rawArray = extractTimelineRawRecords(parsed);
+      if (!rawArray) throw new Error("unsupported-shape");
+      const totalInSource = rawArray.length;
+      const rangeStart = importRange.startDate || null;
+      const rangeEnd = importRange.endDate || null;
+      const included = rawArray.filter(rec => isWithinImportRange(dateOnly(rec.startTime), rangeStart, rangeEnd));
+      if (included.length === 0) throw new Error("no-records-in-range");
+
+      const byDayRaw = {};
+      included.forEach(rec => { const d = dateOnly(rec.startTime); (byDayRaw[d] = byDayRaw[d] || []).push(rec); });
+      const now = Date.now();
+      let newDaysCount = 0, skippedDaysCount = 0;
+      const nextStore = { ...dayStore };
+      Object.entries(byDayRaw).forEach(([day, recs]) => {
+        if (nextStore[day] && currentEntryOf(nextStore[day])) { skippedDaysCount++; return; }
+        nextStore[day] = {
+          entries: [ ...(nextStore[day]?.entries || []), { id: uid("ale"), status:"current", importedAt: now, fileName: file.name, records: recs } ],
+          meta: nextStore[day]?.meta || emptyDayMeta(now),
+        };
+        newDaysCount++;
+      });
+      const recomputedStore = recomputeAllDayMeta(nextStore, places, now);
+      setDayStore(recomputedStore);
+      await idbSet(ARCHIVE_IDB_KEYS.dayStore, recomputedStore);
+
+      const summary = {
+        totalInSource, includedCount: included.length, excludedCount: totalInSource - included.length,
+        rangeStart, rangeEnd, importedAt: now, fileName: file.name, newDaysCount, skippedDaysCount,
+      };
+      setImportSummary(summary);
+      await idbSet(ARCHIVE_IDB_KEYS.importSummary, summary);
+      setDayView(null);
+      showToast(newDaysCount > 0
+        ? `Googleタイムラインを取り込みました（新規${newDaysCount}日・対象外${totalInSource - included.length}件）`
+        : `新規に追加できる日はありませんでした（${skippedDaysCount}日は取込済みのためスキップ）`);
+    } catch (err) {
+      showToast(err && err.message === "unsupported-shape"
+        ? "対応していないJSON形式です（semanticSegments形式のファイルをお試しください）"
+        : err && err.message === "no-records-in-range"
+          ? "指定した期間内に取込可能な記録がありませんでした"
+          : "JSONの読み込みに失敗しました");
+    } finally {
+      setImporting(false);
+      if (jsonInputRef.current) jsonInputRef.current.value = "";
+    }
+  };
+
+  // 日付単位インポート：指定日のみを対象に、旧データをstatus="old"として残し新データを追加する
+  const onReimportDay = async (targetDay, file) => {
+    setReimportTargetDay(targetDay);
+    setReimporting(true);
+    try {
+      const text = await readFileAsText(file);
+      const parsed = JSON.parse(text);
+      const rawArray = extractTimelineRawRecords(parsed);
+      if (!rawArray) throw new Error("unsupported-shape");
+      const dayRecords = rawArray.filter(rec => dateOnly(rec.startTime) === targetDay);
+      if (dayRecords.length === 0) throw new Error("day-not-found");
+      const now = Date.now();
+      const bucket = dayStore[targetDay] || { entries: [], meta: emptyDayMeta(now) };
+      const archivedEntries = bucket.entries.map(en => en.status === "current" ? { ...en, status:"old" } : en);
+      const newEntries = [ ...archivedEntries, { id: uid("ale"), status:"current", importedAt: now, fileName: file.name, records: dayRecords } ];
+      const nextBucketRaw = { entries: newEntries, meta: { ...bucket.meta, lastEditedAt: now } };
+      const nextBucket = recomputeDayMeta(nextBucketRaw, places, now);
+      const nextStore = { ...dayStore, [targetDay]: nextBucket };
+      setDayStore(nextStore);
+      await idbSet(ARCHIVE_IDB_KEYS.dayStore, nextStore);
+      showToast(`${targetDay}のデータを再取込しました（${dayRecords.length}件・旧データは履歴として保持されます）`);
+    } catch (err) {
+      showToast(err && err.message === "unsupported-shape" ? "対応していないJSON形式です"
+        : err && err.message === "day-not-found" ? `選択したJSONに${targetDay}のデータが見つかりませんでした`
+        : "JSONの読み込みに失敗しました");
+    } finally {
+      setReimporting(false);
+      setReimportTargetDay(null);
+    }
+  };
+
+  if (dayView) {
+    return (
+      <>
+        <TimelineDayView title="🗄 タイムライン格納庫" day={dayView} dayBucket={dayStore[dayView]} records={byDay[dayView]||[]} places={places} dayKeys={dayKeys}
+          onChangeDay={setDayView} onClose={()=>setDayView(null)} onRegister={setRegisterTarget}
+          onReimportDay={onReimportDay} isSample={false} reimporting={reimporting && reimportTargetDay===dayView} />
+        {registerTarget && (
+          <PlaceFormalRegisterOverlay visit={registerTarget} allVisits={allVisits}
+            existingPlace={places.find(p => (p.placeIds||[]).includes(registerTarget.googlePlaceId)) || null}
+            onClose={()=>setRegisterTarget(null)} onSave={handleRegister} />
+        )}
+      </>
+    );
+  }
+
+  return (
+    <div style={{ padding:"16px 16px 100px" }}>
+      <SubHeader title="🗄 タイムライン格納庫" onBack={onClose} />
+      <div style={{ padding:"16px 0" }}>
+        <div style={{ fontSize:11.5, color:C.textFaint, background:C.card, border:`1px dashed ${C.border}`, borderRadius:10, padding:"10px 12px", marginBottom:12 }}>
+          Googleタイムラインの記録を確認しながら「正式登録」すると、正式場所図鑑（訪問図鑑）へそのまま登録されます。場所の名前変更・分類変更・お気に入りなどは訪問図鑑側で行ってください（ここでの表示にも自動で反映されます）。
+        </div>
+
+        {loading && dayKeys.length === 0 && (
+          <div style={{ fontSize:12, color:C.textFaint, padding:"10px 0" }}>読み込み中…</div>
+        )}
+        {!loading && dayKeys.length === 0 && !importSummary && (
+          <div style={{ fontSize:11.5, color:C.textFaint, background:C.bg, border:`1px solid ${C.border}`, borderRadius:10, padding:"9px 12px", marginBottom:14 }}>
+            まだ取込データがありません。下の「JSON選択」からGoogleタイムラインのJSONを取り込んでください。
+          </div>
+        )}
+        {importSummary && (
+          <div style={{ fontSize:11, color:C.textSecondary, background:C.card, border:`1px solid ${C.border}`, borderRadius:10, padding:"10px 12px", marginBottom:14 }}>
+            <div style={{ fontWeight:700, color:C.accentDeep, marginBottom:4 }}>直近の全体取込結果　{new Date(importSummary.importedAt).toLocaleString("ja-JP")}</div>
+            <div style={{ display:"flex", justifyContent:"space-between" }}><span>元JSON</span><span>{importSummary.totalInSource.toLocaleString()}件</span></div>
+            <div style={{ display:"flex", justifyContent:"space-between" }}><span>取込対象</span><span>{importSummary.includedCount.toLocaleString()}件</span></div>
+            <div style={{ display:"flex", justifyContent:"space-between" }}><span>対象外</span><span>{importSummary.excludedCount.toLocaleString()}件</span></div>
+            <div style={{ display:"flex", justifyContent:"space-between" }}><span>対象期間</span><span>{importSummary.rangeStart||"指定なし"}〜{importSummary.rangeEnd||""}</span></div>
+            <div style={{ color:C.textFaint, marginTop:4 }}>新規追加：{importSummary.newDaysCount}日　・　既存のためスキップ：{importSummary.skippedDaysCount}日　・　{importSummary.fileName}</div>
+          </div>
+        )}
+
+        <div style={{ display:"flex", gap:8, marginBottom:8 }}>
+          <div style={{ flex:1 }}>
+            <label style={{ fontSize:10.5, color:C.textSecondary, fontWeight:700, display:"block", marginBottom:3 }}>取込開始日</label>
+            <input type="date" value={importRange.startDate||""} onChange={e=>updateImportRange({ startDate: e.target.value || null })}
+              style={{ width:"100%", padding:"7px 8px", borderRadius:8, border:`1px solid ${C.border}`, fontSize:12.5, background:"#fff" }} />
+          </div>
+          <div style={{ flex:1 }}>
+            <label style={{ fontSize:10.5, color:C.textSecondary, fontWeight:700, display:"block", marginBottom:3 }}>終了日（任意）</label>
+            <input type="date" value={importRange.endDate||""} onChange={e=>updateImportRange({ endDate: e.target.value || null })}
+              style={{ width:"100%", padding:"7px 8px", borderRadius:8, border:`1px solid ${C.border}`, fontSize:12.5, background:"#fff" }} />
+          </div>
+        </div>
+        <div style={{ fontSize:10, color:C.textFaint, marginBottom:10 }}>次にJSONを選択したときの取込範囲です。開始日より前のデータは保存されません（削除ではなく対象外）</div>
+
+        <div style={{ display:"flex", gap:8, marginBottom:10 }}>
+          <label style={{
+            flex:1, textAlign:"center", padding:"11px 0", borderRadius:12, border:`1px solid ${C.accentDeep}`, background: importing?C.accentLight:"#fff",
+            color:C.accentDeep, fontSize:12.5, fontWeight:700, cursor: importing?"default":"pointer", display:"block",
+          }}>
+            {importing ? "読込中…" : "JSON選択"}
+            <input ref={jsonInputRef} type="file" accept=".json,application/json" onChange={onPickJsonFile} disabled={importing} style={{ display:"none" }} />
+          </label>
+        </div>
+        {dayKeys.length > 0 && (
+          <button onClick={()=>setConfirmDeleteJson(true)} style={{ background:"none", border:"none", color:C.danger, fontSize:12, fontWeight:700, cursor:"pointer", padding:0, marginBottom:14 }}>
+            取込済みのタイムラインデータをすべて削除する
+          </button>
+        )}
+
+        {dayKeys.length > 0 && (
+          <>
+            <div style={{ fontSize:12, fontWeight:700, color:C.textSecondary, margin:"10px 0 8px" }}>取り込んだデータ（{dayKeys.length}日分）</div>
+
+            <div style={{ display:"flex", gap:8, alignItems:"center", flexWrap:"wrap", marginBottom:10 }}>
+              <select value={sortId} onChange={e=>setSortId(e.target.value)} style={{ fontSize:12, padding:"7px 8px", borderRadius:8, border:`1px solid ${C.border}`, background:"#fff" }}>
+                {TIMELINE_DAY_SORTS.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
+              </select>
+              <label style={{ display:"flex", alignItems:"center", gap:5, fontSize:12, color:C.textSecondary }}>
+                <input type="checkbox" checked={onlyUnregistered} onChange={e=>setOnlyUnregistered(e.target.checked)} />
+                未登録がある日だけ
+              </label>
+            </div>
+
+            {tree.length === 0 && <div style={{ fontSize:12.5, color:C.textFaint, padding:"10px 0" }}>該当する日がありません</div>}
+
+            {tree.map(yearNode => {
+              const yOpen = onlyUnregistered || expandedYears.has(yearNode.year);
+              return (
+                <div key={yearNode.year} style={{ marginBottom:6 }}>
+                  <button onClick={()=>toggleYear(yearNode.year)} style={{ width:"100%", textAlign:"left", padding:"10px 12px", borderRadius:10, border:`1px solid ${C.border}`, background:C.card, cursor:"pointer" }}>
+                    <span style={{ fontSize:13.5, fontWeight:800, color:C.textPrimary }}>{yOpen?"▼":"▶"} {yearNode.year}年{yearNode.complete && " ✅"}</span>
+                  </button>
+                  {yOpen && yearNode.months.map(monthNode => {
+                    const mKey = `${yearNode.year}-${monthNode.month}`;
+                    const mOpen = onlyUnregistered || expandedMonths.has(mKey);
+                    return (
+                      <div key={mKey} style={{ marginLeft:14, marginTop:4 }}>
+                        <button onClick={()=>toggleMonth(mKey)} style={{ width:"100%", textAlign:"left", padding:"8px 12px", borderRadius:10, border:`1px solid ${C.border}`, background:"#fff", cursor:"pointer" }}>
+                          <span style={{ fontSize:12.5, fontWeight:700, color:C.textSecondary }}>{mOpen?"▼":"▶"} {Number(monthNode.month)}月{monthNode.complete && " ✅"}</span>
+                        </button>
+                        {mOpen && (
+                          <div style={{ marginLeft:14, marginTop:4 }}>
+                            {monthNode.days.map(d => {
+                              const info = dayInfo[d];
+                              return (
+                                <button key={d} onClick={()=>setDayView(d)} style={{
+                                  width:"100%", textAlign:"left", display:"flex", justifyContent:"space-between", alignItems:"center",
+                                  padding:"10px 12px", borderRadius:10, border:`1px solid ${C.border}`, background:C.card, marginBottom:6, cursor:"pointer",
+                                }}>
+                                  <span style={{ fontSize:13, fontWeight:700, color:C.textPrimary }}>{d}{info?.meta?.currentlyComplete ? " ✅" : ""}</span>
+                                  <span style={{ fontSize:11, color: info?.unregisteredCount>0 ? C.warn : C.textFaint }}>
+                                    {info?.unregisteredCount>0 ? `未登録${info.unregisteredCount}件` : "登録済み"}　・　{info?.totalVisits}件 ›
+                                  </span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })}
+          </>
+        )}
+
+        <div style={{ borderTop:`1px solid ${C.border}`, marginTop:20, paddingTop:16 }}>
+          <div style={{ fontSize:11.5, color:C.textFaint, marginBottom:10 }}>
+            場所の管理（名前・分類・お気に入りなど）は訪問図鑑で行います。現在{places.length}件登録されています。
+          </div>
+          {onOpenPlaces && (
+            <button onClick={onOpenPlaces} style={{ background:"none", border:"none", color:C.accentDeep, fontSize:12.5, fontWeight:700, cursor:"pointer", padding:0, marginBottom:10 }}>訪問図鑑を開く ›</button>
+          )}
+          <div>
+            <button onClick={()=>setConfirmReset(true)} style={{ background:"none", border:"none", color:C.danger, fontSize:12.5, fontWeight:700, cursor:"pointer", padding:0 }}>タイムライン格納庫の取込データを初期化する</button>
+          </div>
+        </div>
+      </div>
+
+      {confirmReset && (
+        <ConfirmDialog title="タイムライン格納庫を初期化しますか？"
           message="取込済みのタイムラインデータ（日ごとの記録・完了履歴）がすべて削除されます。正式場所図鑑（訪問図鑑）に登録済みの場所データには影響しません。元に戻せません。"
           onCancel={()=>setConfirmReset(false)} onConfirm={executeReset} />
       )}
       {confirmDeleteJson && (
         <ConfirmDialog title="取込済みのタイムラインデータを削除しますか？"
-          message="取り込んだGoogleタイムラインデータ（履歴を含む）が削除され、固定サンプルの表示に戻ります。正式場所図鑑に登録済みの場所データは削除されません。元に戻せません。"
+          message="取り込んだGoogleタイムラインデータ（履歴を含む）がすべて削除されます。正式場所図鑑に登録済みの場所データは削除されません。元に戻せません。"
           onCancel={()=>setConfirmDeleteJson(false)} onConfirm={executeDeleteJson} />
       )}
     </div>
@@ -4142,7 +4367,8 @@ function App() {
     })();
   }, [settings.researchPlacesMergedV25]);
 
-  // ── Ver2.5.0：研究室（Googleタイムライン研究室）の「正式登録」から呼ばれる、正式場所図鑑への直接保存 ──
+  // ── Ver2.5.1：タイムライン格納庫（PlaceArchiveScreen）の「正式登録」から呼ばれる、正式場所図鑑への直接保存 ──
+  // （研究所は完全に隔離されており、ここは一切呼び出さない）
   // 同じGoogle Place IDを持つ場所が既にあれば追記更新、無ければ新規作成する。
   // dayStore側の完了判定をその場で再計算できるよう、更新後のplaces配列を同期的に返す。
   const onRegisterPlace = (visit, form) => {
@@ -4192,7 +4418,7 @@ function App() {
   const [justEditedId, setJustEditedId] = useState(null);
   const [placeDetailId, setPlaceDetailId] = useState(null);
   const [placeAddOpen, setPlaceAddOpen] = useState(false);
-  const [placeTimelineImportOpen, setPlaceTimelineImportOpen] = useState(false);
+  const [placeArchiveOpen, setPlaceArchiveOpen] = useState(false);
   const [tagAddOpen, setTagAddOpen] = useState(false);
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -4375,7 +4601,7 @@ function App() {
       {tab === "devMode" && <DevModeView onOpenTimelineLab={()=>setTimelineLabOpen(true)} />}
       {tab === "places" && (
         <PlacesView places={places} items={items} onOpenPlace={setPlaceDetailId} onAddPlace={() => setPlaceAddOpen(true)}
-          onOpenTimelineImport={() => setPlaceTimelineImportOpen(true)} />
+          onOpenTimelineImport={() => setPlaceArchiveOpen(true)} />
       )}
       {tab === "settings" && (
         <SettingsView items={items} receipts={receipts} tags={tags} places={places} dayNotes={dayNotes}
@@ -4407,7 +4633,14 @@ function App() {
 
       {timelineLabOpen && (
         <div style={{ position:"fixed", inset:0, background:C.bg, zIndex:230, overflowY:"auto" }}>
-          <TimelineLabScreen onClose={()=>setTimelineLabOpen(false)} showToast={showToast} places={places} onRegisterPlace={onRegisterPlace} />
+          <TimelineLabScreen onClose={()=>setTimelineLabOpen(false)} showToast={showToast} />
+        </div>
+      )}
+
+      {placeArchiveOpen && (
+        <div style={{ position:"fixed", inset:0, background:C.bg, zIndex:230, overflowY:"auto" }}>
+          <PlaceArchiveScreen onClose={()=>setPlaceArchiveOpen(false)} showToast={showToast} places={places} onRegisterPlace={onRegisterPlace}
+            onOpenPlaces={()=>{ setPlaceArchiveOpen(false); setTab("places"); }} />
         </div>
       )}
 
@@ -4428,11 +4661,6 @@ function App() {
 
       {placeAddOpen && (
         <PlaceAddOverlay places={places} onClose={() => setPlaceAddOpen(false)} createPlace={createPlace} />
-      )}
-
-      {placeTimelineImportOpen && (
-        <PlaceTimelineImportOverlay places={places} onClose={() => setPlaceTimelineImportOpen(false)} createPlace={createPlace} showToast={showToast}
-          onNavigateToTimelineLab={() => { setPlaceTimelineImportOpen(false); setTab("devMode"); setTimelineLabOpen(true); }} />
       )}
 
       {tagAddOpen && (
