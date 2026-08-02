@@ -4,6 +4,6 @@
 
 ## Version別
 
-- Ver1.x → CHANGELOG-01.md
-- Ver2.x → CHANGELOG-02.md
-- Ver3.x → CHANGELOG-03.md（将来）
+- [Version 1.x 更新履歴](CHANGELOG-01.md)
+- [Version 2.x 更新履歴](CHANGELOG-02.md)
+- [Version 3.x 更新履歴](CHANGELOG-03.md)（将来）
