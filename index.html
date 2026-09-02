@@ -34,7 +34,7 @@ const { useState, useEffect, useRef, useMemo, useLayoutEffect } = React;
 // 定数・バージョン
 // ══════════════════════════════════════════════════════════════
 const APP_NAME = "ともたろぐ";
-const DATA_VERSION = "2.8.0"; // ⚠️ 上げたら sw.js の SW_VERSION も同じ値に揃えること
+const DATA_VERSION = "2.8.1"; // ⚠️ 上げたら sw.js の SW_VERSION も同じ値に揃えること
 const APP_ICON = "data:image/png;base64,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";
 
 // ── A2パレット: ターコイズ3階調 + 役割ベースの色 ──────────
@@ -298,40 +298,31 @@ const DEFAULT_ACTIVITY_LABEL_SEED = { WALK: "🚶‍♀️ 徒歩", DRIVE: "🚗
 const DISPLAY_MAP_LS_KEYS = {
   activityLabels: ARCHIVE_LS_KEYS.activityLabels,
   categoryLabels: "tomota2_display_categoryLabels", // { "医療機関":"🏥 医療機関", ... }
+  tagUsageSymbols: "tomota2_display_tagUsageSymbols", // Ver2.8.1⑳㉒：{ TIMELINE:"＃", ACCOUNTING:"€", PLACE_BOOK:"📍" }
 };
 // ══════════════════════════════════════════════════════════════
-// Ver2.8.0①②：タイムラインタグ。生活ログのタイムライン表示に自由に付けられるタグで、
-// 家計簿タグ（tags, kind:"tag"）とはデータを分離する（同じ単語を使っても付与元を区別するため）。
-// 保存形式：{ [recordKey]: ["北海道","旅行", ...] }（各タグ語には#を含めずに保存し、表示時に付与する）。
-// recordKeyは「その記録がどの日付・どの時刻・どの場所/移動手段のものか」から組み立てる、表示専用の
-// 疑似キー（タイムライン格納庫の元データそのものにはIDが無いため）。同じGoogleタイムラインJSONを
-// 再取込した場合、通常はstartTimeや場所IDが変わらないため、タグは引き継がれる想定（保証ではない）。
-// 「#空白日補完」タグは、ここには保存しない。空白日かどうかはbuildTrialDayRecordsが毎回ルールに基づいて
-// 判定する「導出タグ」のため、保存せず常に計算結果をそのまま表示する（原データ→解釈→表示の分離）。
+// Ver2.8.1⑨⑯：タイムラインタグは、タグマスター（tags, kind:"tag"）を参照するIDベースの仕組みへ
+// 変更した（Ver2.8.0では自由記述の単語をそのまま保存していたが、依頼書⑨⑯の「タグは名前札であり、
+// タグ名変更が参照データへ追従するにはID参照にする必要がある」という設計方針に合わせた）。
+// 保存形式：{ [date]: [tagId, ...] }（依頼書⑧により、場所・Visit単位ではなく「日単位」で付与する）。
+// 「空白日補完」の自動タグは、ここには保存しない。タグマスター側にシステムタグ（id:"tag_blankfill"）
+// として登録しておき、buildDayTimelineViewの判定結果に応じて表示側でIDから名前を都度引く
+// （＝タグ名を変更すれば、この導出タグの表示名にも反映される）。
+// 旧Ver2.8.0のキー（tomota2_timeline_tags・自由記述の単語）は使用しなくなったが、データ形式に
+// 互換性が無いため自動移行はしていない（保存されていても無視される。既知の制約として引き継ぎ書に記載）。
 // ══════════════════════════════════════════════════════════════
-const TIMELINE_TAG_LS_KEY = "tomota2_timeline_tags";
-function timelineRecordKey(date, r) {
-  if (!r) return null;
-  if (r.kind === "fillAllDay") return `${date}|fill|${r.googlePlaceId||""}`;
-  if (r.kind === "visit") return `${date}|visit|${r.startTime||""}|${r.googlePlaceId||""}`;
-  if (r.kind === "activity") return `${date}|activity|${r.startTime||""}|${r.activityType||""}`;
-  return null;
-}
-function loadTimelineTagsMap() { return loadLS(TIMELINE_TAG_LS_KEY, {}); }
-function getTimelineTagsFor(recordKey, map) { return (recordKey && map && map[recordKey]) || []; }
-function saveTimelineTagsFor(recordKey, names) {
-  const map = loadTimelineTagsMap();
-  const cleaned = Array.from(new Set(names.map(n => String(n||"").trim()).filter(Boolean)));
-  if (cleaned.length === 0) { delete map[recordKey]; } else { map[recordKey] = cleaned; }
-  saveLS(TIMELINE_TAG_LS_KEY, map);
+const TIMELINE_DAY_TAG_LS_KEY = "tomota2_timeline_day_tags";
+function loadTimelineDayTagsMap() { return loadLS(TIMELINE_DAY_TAG_LS_KEY, {}); }
+function getTimelineDayTagIds(date, map) { return (date && map && map[date]) || []; }
+function saveTimelineDayTagIds(date, tagIds) {
+  const map = loadTimelineDayTagsMap();
+  const cleaned = Array.from(new Set(tagIds.filter(Boolean)));
+  if (cleaned.length === 0) { delete map[date]; } else { map[date] = cleaned; }
+  saveLS(TIMELINE_DAY_TAG_LS_KEY, map);
   return map;
 }
-// 表示置き換えページ等での「よく使うタイムラインタグ」候補一覧に使う（現在保存されている全タグ語の集合）
-function collectAllTimelineTagWords(map) {
-  const set = new Set();
-  Object.values(map || {}).forEach(arr => (arr||[]).forEach(w => set.add(w)));
-  return Array.from(set).sort();
-}
+// タイムライン使用先のタグを、表示置き換えの記号（既定＃）を先頭に付けて表示する。
+function tagLabelForUsage(tag, usageKey, symbolMap) { return `${tagUsageSymbol(usageKey, symbolMap)}${tag.name}`; }
 const ARCHIVE_IDB_KEYS = {
   dayStore: "placeArchive:dayStore",           // 日単位の取込データ＋完了履歴
   importSummary: "placeArchive:importSummary", // 直近の全体JSON取込結果の集計
@@ -488,62 +479,99 @@ function currentEntryOf(dayBucket) {
   return dayBucket?.entries?.find(e => e.status === "current") || null;
 }
 // ══════════════════════════════════════════════════════════════
-// Ver2.7.3：生活ログ「⏰タイムライン」試験表示のための、表示専用の日別レコード組み立て。
-// タイムライン格納庫の元データ（dayStore）は一切変更せず、この関数の中だけで「表示のための
-// 補完・除外・宿泊判定」を行う。実装方針は依頼書のとおり、あくまで試験実装（最終仕様ではない）。
+// Ver2.8.1①：タイムライン表示・解釈の修正。
+// これまでの実装は「その日に開始したレコードだけ」を見て日別表示を組み立てていたため、複数日に
+// またがる長時間Visit（例：8/14 15:07〜8/17 07:10の連続滞在）を正しく解釈できず、実際には滞在して
+// いる8/15・8/16が「記録なし（＝推測による空白日補完の対象）」と誤認されてしまっていた。
 //
-// 行うこと（依頼書①②に対応）：
-//  1) 日付またぎ前後5分以内の短い移動（isMidnightEdgeActivity）は、表示からも宿泊判定からも除外する
-//  2) 前日の最終滞在地（除外後）と当日の最初の滞在地（除外後）が同じ場所なら「宿泊」とみなし、
-//     当日側の最初の滞在カードへ isOvernightContinuation フラグを付与する（データそのものは統合しない）
-//  3) 当日に記録が0件（またはフィルタ後0件）の場合、前日の最終滞在地を「終日」として表示のみ補完する
-//     （前日1日分のみを参照。前日もさらに空白日補完だった場合は連鎖させない＝試験実装の割り切り）
-// ══════════════════════════════════════════════════════════════
+// Ver2.8.1では、既存の groupTimelineByDay（Visitの日またぎを開始日〜終了日の全日に展開し、
+// isContinuationFromPrevDay／continuesToNextDay を付与するユーティリティ。TimelineLabScreen等で
+// 既に使われていた仕組み）を、タイムライン試験表示（TimelineTrialView）でも使うように統一した。
+// 「前日を1日だけ参照して推測で埋める」旧来の空白日補完は、groupTimelineByDayで日を展開しても
+// なお記録が見つからない「本当の空白日」にのみ適用する（元データに基づく正しい解釈と、推測による
+// 補完を混同しない＝依頼書2-2の方針）。
+//
+// 実装上、Visitは「開始した日」のバケットにのみ保存されている（取込時の格納規則）ため、複数日に
+// またがるVisitを正しく拾うには、当日だけでなく過去何日分かのバケットも読み込む必要がある。
+// TIMELINE_LOOKBACK_DAYSは「1件のVisitが何日前まで遡って開始していた可能性を考慮するか」の上限で、
+// 既知の制約として、これより長い連続滞在（例：1か月を超える長期滞在）は先頭側が欠けることがある。
+const TIMELINE_LOOKBACK_DAYS = 30;
+
 // Ver2.8.0⑬⑭：訪問図鑑では、ひとつの場所に複数のGoogle Place IDをまとめて保持することがある
 // （例：改装・表記ゆれ等でGoogleの内部IDが変わった場合）。その場合、タイムライン表示・宿泊地判定
 // などの「場所の同一性」は、Google Place ID単体ではなく「訪問図鑑上の場所（place.id）」を基本単位
 // とする。訪問図鑑に未登録の地点は、従来どおりgooglePlaceIdそのものを識別子として扱う。
+// Ver2.8.1⑤⑥：この識別子を、タイムライン上の場所表示・同一場所判定・滞在判定・宿泊判定・
+// 当日の最初の場所・前日の最後の場所・日跨ぎ処理・空白日/継続滞在の解釈など、場所の同一性を
+// 必要とするすべての判定で統一して使う。
 function resolveArchiveIdentity(googlePlaceId, places) {
   if (!googlePlaceId) return null;
   const place = (places || []).find(p => (p.placeIds||[]).includes(googlePlaceId));
   return place ? `place:${place.id}` : `gp:${googlePlaceId}`;
 }
-function buildTrialDayRecords(currentDay, dayStore, places) {
-  const prevDay = addDaysStr(currentDay, -1);
-  const curEntry = currentEntryOf(dayStore?.[currentDay]);
-  const curRawAll = curEntry?.records || [];
-  const prevRawAll = currentEntryOf(dayStore?.[prevDay])?.records || [];
 
-  const curParsedAll = parseTimelineJSON(curRawAll).sort((a,b) => a.startTime.localeCompare(b.startTime));
-  const prevParsedAll = parseTimelineJSON(prevRawAll).sort((a,b) => a.startTime.localeCompare(b.startTime));
-
-  const curParsed = curParsedAll.filter(r => !isMidnightEdgeActivity(r));
-  const prevParsed = prevParsedAll.filter(r => !isMidnightEdgeActivity(r));
-
-  const prevLastVisit = [...prevParsed].reverse().find(r => r.kind === "visit") || null;
-  const curFirstVisit = curParsed.find(r => r.kind === "visit") || null;
-  // Ver2.8.0⑫⑬：宿泊地判定は「訪問図鑑上の場所」単位で行う（同じ場所に複数Place IDが
-  // 登録されている場合、それらは同一場所として扱う）。
-  const isOvernightConnection = !!(
-    prevLastVisit && curFirstVisit && curParsed[0] === curFirstVisit &&
-    prevLastVisit.googlePlaceId && curFirstVisit.googlePlaceId &&
-    resolveArchiveIdentity(prevLastVisit.googlePlaceId, places) === resolveArchiveIdentity(curFirstVisit.googlePlaceId, places)
-  );
-
-  if (curParsed.length === 0) {
-    // 空白日：前日の最終滞在地を「終日」として表示のみ補完する
-    if (prevLastVisit) {
-      return { status: "filled", records: [{ kind: "fillAllDay", googlePlaceId: prevLastVisit.googlePlaceId }] };
-    }
-    return { status: curEntry ? "empty" : "noData", records: [] };
-  }
-
-  const records = curParsed.map(r => {
-    if (r === curFirstVisit && isOvernightConnection) return { ...r, isOvernightContinuation: true };
-    if (r.kind === "visit") return { ...r, continuesToNextDay: dateOnly(r.endTime) > currentDay };
-    return r;
+function collectRawRecordsForWindow(dayStore, fromDay, toDay) {
+  const all = [];
+  daysBetweenInclusive(fromDay, toDay).forEach(d => {
+    const entry = currentEntryOf(dayStore?.[d]);
+    if (entry?.records) all.push(...entry.records);
   });
-  return { status: "data", records };
+  return all;
+}
+
+// dayStoreと訪問図鑑（places）から、[fromDay, toDay] の範囲について「日別のタイムライン表示」を
+// まとめて組み立てる（1回のスイープで済ませ、日ごとに繰り返し呼び出す場合よりも効率的にする）。
+// 戻り値：{ [day]: { status: "data"|"filled"|"empty"|"noData", records: [...] } }
+//  - "data"：その日にGoogle由来の記録がある（単日のVisit/Activity、または複数日にまたがる
+//    Visitの一部としてその日にも滞在している場合の両方を含む＝これがVer2.8.1で修正した部分）
+//  - "filled"：Google由来の記録は無いが、前日の最終滞在地が続いているものとして表示のみ補完した
+//    （推測。#空白日補完タグの対象）
+//  - "empty" / "noData"：その日・前日ともに手がかりが無い
+function buildTimelineRangeView(dayStore, places, fromDay, toDay) {
+  const windowStart = addDaysStr(fromDay, -TIMELINE_LOOKBACK_DAYS);
+  const rawWindow = collectRawRecordsForWindow(dayStore, windowStart, toDay);
+  const parsedAll = parseTimelineJSON(rawWindow)
+    .filter(r => !isMidnightEdgeActivity(r))
+    .sort((a,b) => a.startTime.localeCompare(b.startTime));
+  const byDay = groupTimelineByDay(parsedAll);
+
+  const result = {};
+  daysBetweenInclusive(fromDay, toDay).forEach(day => {
+    const dayRecordsRaw = byDay[day] || [];
+    const prevDay = addDaysStr(day, -1);
+    const prevDayRecords = byDay[prevDay] || [];
+    const prevLastVisit = [...prevDayRecords].reverse().find(r => r.kind === "visit") || null;
+    const curFirstVisit = dayRecordsRaw.find(r => r.kind === "visit") || null;
+
+    let dayRecords = dayRecordsRaw;
+    // Ver2.8.0⑫⑬：前日最終滞在地と当日最初の滞在地が「訪問図鑑上の場所」として同一なら宿泊とみなす。
+    // すでにisContinuationFromPrevDayがtrue（＝実データ上、同じVisitレコードが日をまたいで
+    // 継続している）の場合は、これ自体がすでに「宿泊・継続滞在」を表しているため、この推測処理は行わない。
+    if (curFirstVisit && dayRecordsRaw[0] === curFirstVisit && !curFirstVisit.isContinuationFromPrevDay && prevLastVisit) {
+      const same = curFirstVisit.googlePlaceId && prevLastVisit.googlePlaceId &&
+        resolveArchiveIdentity(prevLastVisit.googlePlaceId, places) === resolveArchiveIdentity(curFirstVisit.googlePlaceId, places);
+      if (same) {
+        dayRecords = dayRecordsRaw.map(r => r === curFirstVisit ? { ...r, isOvernightContinuation: true } : r);
+      }
+    }
+
+    if (dayRecords.length > 0) {
+      result[day] = { status: "data", records: dayRecords };
+      return;
+    }
+    // Visitの日またぎ展開を経てもなお記録が見つからない＝本当の空白日。前日の最終滞在地を
+    // 「終日」として表示のみ補完する（推測。前日1日分のみを参照する割り切り＝Ver2.7.3から継続）。
+    if (prevLastVisit) {
+      result[day] = { status: "filled", records: [{ kind: "fillAllDay", googlePlaceId: prevLastVisit.googlePlaceId }] };
+      return;
+    }
+    result[day] = { status: currentEntryOf(dayStore?.[day]) ? "empty" : "noData", records: [] };
+  });
+  return result;
+}
+
+function buildDayTimelineView(currentDay, dayStore, places) {
+  return buildTimelineRangeView(dayStore, places, currentDay, currentDay)[currentDay];
 }
 function countUnregisteredVisits(records, places) {
   return parseTimelineJSON(records).filter(r => r.kind === "visit")
@@ -714,26 +742,48 @@ const TAG_GROUPS = [
   { key:"system", label:"システム", icon:"⚙️" },
   { key:"person", label:"人物", icon:"👤" },
   { key:"event",  label:"イベント", icon:"📌" },
-  { key:"free",   label:"自由", icon:"🏷️" },
+  { key:"free",   label:"フリータグ", icon:"🏷️" },
 ];
+// Ver2.8.1⑲⑳：タグの「使用先」。内部識別子は安定した英字定数とし、画面表示の記号は
+// 「マスター管理＞表示置き換え」側で管理する（内部識別子と表示記号を分離する。⑲⑳⑤⑥）。
+// 現時点で確定している使用先はこの3つのみ（⑲）。
+const TAG_USAGE = { TIMELINE: "TIMELINE", ACCOUNTING: "ACCOUNTING", PLACE_BOOK: "PLACE_BOOK" };
+const TAG_USAGE_LIST = [
+  { key: TAG_USAGE.TIMELINE,   label: "タイムライン" },
+  { key: TAG_USAGE.ACCOUNTING, label: "家計簿" },
+  { key: TAG_USAGE.PLACE_BOOK, label: "訪問図鑑" },
+];
+// 表示記号の既定値（表示置き換えで未設定の場合のフォールバック。⑳）
+const DEFAULT_TAG_USAGE_SYMBOLS = { [TAG_USAGE.TIMELINE]: "＃", [TAG_USAGE.ACCOUNTING]: "€", [TAG_USAGE.PLACE_BOOK]: "📍" };
+function tagUsageSymbol(usageKey, symbolMap) { return (symbolMap && symbolMap[usageKey]) || DEFAULT_TAG_USAGE_SYMBOLS[usageKey] || ""; }
+// タグ一覧での使用先まとめ表示（例：北海道(#€)）。定義済みの使用先の並び順で連結する（㉓）。
+function tagUsageBadge(tag, symbolMap) {
+  const usage = tag.usage || [];
+  if (usage.length === 0) return "";
+  const symbols = TAG_USAGE_LIST.filter(u => usage.includes(u.key)).map(u => tagUsageSymbol(u.key, symbolMap)).join("");
+  return symbols ? `(${symbols})` : "";
+}
 function tagIcon(tag) {
   if (tag.excludeFromTotal) return "🚫";
   return TAG_GROUPS.find(g => g.key === (tag.group||"free"))?.icon || "🏷️";
 }
-// Ver2.8.0④：家計簿タグは先頭に「＊」を付けて表示し、タイムラインタグ（先頭「#」）と
-// 同じ単語を使っていても由来（付与元）が見分けられるようにする。データ（tag.name）そのものには
-// 記号を含めない（表示時にだけ付与する＝原データと表示を分離する今回の基本方針に合わせる）。
-function householdTagLabel(name) { return `＊${name}`; }
-// Ver2.8.0②：タイムラインタグは先頭に「#」を付けて表示する（データそのものにも#を含めて保存する運用
-// とし、家計簿タグ側は逆に「表示のときだけ＊を付ける」方式にすることで、タイムラインタグの保存値を
-// そのまま検索キーとしても扱えるようにする）。
-function timelineTagLabel(name) { const n = String(name||"").trim(); return n.startsWith("#") ? n : `#${n}`; }
+// Ver2.8.1㉑㉒：家計簿タグの表示記号も、タイムライン・訪問図鑑と同じ「表示置き換え」の使用先記号
+// （ACCOUNTING、既定€）から取得するよう統一した（Ver2.8.0では「＊」を直接埋め込んでいたが、
+// 表示記号は内部識別子と分離し一か所で管理するという今回の設計方針に合わせて置き換えた）。
+function householdTagLabel(name) {
+  const symbolMap = loadLS(DISPLAY_MAP_LS_KEYS.tagUsageSymbols, {});
+  return `${tagUsageSymbol(TAG_USAGE.ACCOUNTING, symbolMap)}${name}`;
+}
 const DEFAULT_TAGS = () => [
   ...DEFAULT_CATEGORY_NAMES.map((name) => ({ id: uid("cat"), name, kind: "category", isSystem: false })),
-  { id: "tag_needcheck",       name: "要確認",         kind: "tag", isSystem: true, group:"system", yomi:"ようかくにん",       excludeFromTotal:false, disabled:false },
-  { id: "tag_copyunchecked",   name: "複写後未確認",    kind: "tag", isSystem: true, group:"system", yomi:"ふくしゃごみかくにん", excludeFromTotal:false, disabled:false },
-  { id: "tag_importunchecked", name: "インポート未確認", kind: "tag", isSystem: true, group:"system", yomi:"いんぽーとみかくにん", excludeFromTotal:false, disabled:false },
-  { id: "tag_excludetotal",    name: "集計除外",        kind: "tag", isSystem: true, group:"system", yomi:"しゅうけいじょがい",   excludeFromTotal:true,  disabled:false },
+  { id: "tag_needcheck",       name: "要確認",         kind: "tag", isSystem: true, group:"system", yomi:"ようかくにん",       excludeFromTotal:false, disabled:false, usage:[TAG_USAGE.ACCOUNTING] },
+  { id: "tag_copyunchecked",   name: "複写後未確認",    kind: "tag", isSystem: true, group:"system", yomi:"ふくしゃごみかくにん", excludeFromTotal:false, disabled:false, usage:[TAG_USAGE.ACCOUNTING] },
+  { id: "tag_importunchecked", name: "インポート未確認", kind: "tag", isSystem: true, group:"system", yomi:"いんぽーとみかくにん", excludeFromTotal:false, disabled:false, usage:[TAG_USAGE.ACCOUNTING] },
+  { id: "tag_excludetotal",    name: "集計除外",        kind: "tag", isSystem: true, group:"system", yomi:"しゅうけいじょがい",   excludeFromTotal:true,  disabled:false, usage:[TAG_USAGE.ACCOUNTING] },
+  // Ver2.8.1⑥⑦⑧：タイムラインの「空白日補完」は、システムタグとしてタグマスターに登録する。
+  // 実際の付与・保存は行わない（buildDayTimelineViewが毎回ルールに基づいて導出する“導出タグ”のため）。
+  // タグマスターに登録しておくことで、タグ名を変更すればこの導出タグの表示名にも反映される（⑯⑱と同じ考え方）。
+  { id: "tag_blankfill",       name: "空白日補完",      kind: "tag", isSystem: true, group:"system", yomi:"くうはくびほかん",     excludeFromTotal:false, disabled:false, usage:[TAG_USAGE.TIMELINE] },
 ];
 const DEFAULT_PLACES = [];
 const DEFAULT_SETTINGS = {
@@ -771,6 +821,20 @@ function payMethodLabel(payMethodId, settings) {
 // 旧形式（文字列配列）のsettings、旧receipt.payMethod（文字列）、旧item.payMethod（文字列）が
 // localStorageに残っていた場合、初回読み込み時に一度だけ変換する。
 // テストデータの完全な引き継ぎは保証しないが、可能な範囲で名称一致による対応付けを行う。
+// Ver2.8.1⑨⑲：既存タグに「使用先（usage）」が無い場合の移行。家計簿タグ（kind:"tag"）は、
+// これまで家計簿（レシート／購入品目）でのみ使われてきたため、usage未設定のものはACCOUNTING扱いにする。
+// カテゴリ（kind:"category"）はタグ使用先の対象外（使用先は"タグ"のみが持つ概念）。
+function migrateTagRecord(t) {
+  if (t.kind !== "tag") return t;
+  if (Array.isArray(t.usage)) return t;
+  return { ...t, usage: [TAG_USAGE.ACCOUNTING] };
+}
+// 既存データに「空白日補完」システムタグ（id:"tag_blankfill"）が無ければ追加する（後方互換）。
+function ensureBlankFillSystemTag(list) {
+  if (list.some(t => t.id === "tag_blankfill")) return list;
+  const seed = DEFAULT_TAGS().find(t => t.id === "tag_blankfill");
+  return seed ? [...list, seed] : list;
+}
 function migrateAllOnLoad() {
   const rawSettings = loadLS(LS_KEYS.settings, DEFAULT_SETTINGS);
   let payMethods = rawSettings.payMethods || [];
@@ -1177,7 +1241,7 @@ const MENU_SECTIONS = [
     { key:"shoppingCatalog", label:"お買い物図鑑", icon:"🛍️", future:true },
   ]},
   { label:"マスター管理", items:[
-    { key:"tags", label:"タグ設定", icon:"🏷️" },
+    { key:"tags", label:"タグ・カテゴリ設定", icon:"🏷️" },
     { key:"paySettings", label:"支払方法設定", icon:"💳" },
     { key:"displayMapping", label:"表示置き換え", icon:"🔤" },
   ]},
@@ -1754,21 +1818,26 @@ function TagsView({ tags, setTags, items, setItems, showToast }) {
   const [newYomi, setNewYomi] = useState("");
   const [newKind, setNewKind] = useState("tag");
   const [newGroup, setNewGroup] = useState("free");
+  const [newUsage, setNewUsage] = useState([TAG_USAGE.ACCOUNTING]);
   const [editingId, setEditingId] = useState(null);
   const [editName, setEditName] = useState("");
   const [editYomi, setEditYomi] = useState("");
+  const [editUsage, setEditUsage] = useState([]);
   const [confirmDeleteTag, setConfirmDeleteTag] = useState(null);
+  const tagUsageSymbols = useMemo(() => loadLS(DISPLAY_MAP_LS_KEYS.tagUsageSymbols, {}), []);
 
   const categories = tags.filter(t => t.kind === "category");
   const plainTags  = tags.filter(t => t.kind === "tag");
+
+  const toggleUsageIn = (setFn, key) => setFn(prev => prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]);
 
   const addTag = () => {
     const name = newName.trim();
     if (!name) return;
     if (tags.some(t => t.name === name)) { showToast("同名のタグが既にあります"); return; }
-    const extra = newKind === "tag" ? { group:newGroup, yomi:newYomi.trim(), excludeFromTotal:false, disabled:false } : {};
+    const extra = newKind === "tag" ? { group:newGroup, yomi:newYomi.trim(), excludeFromTotal:false, disabled:false, usage:newUsage } : {};
     setTags(prev => [...prev, { id: uid(newKind==="category"?"cat":"tag"), name, kind:newKind, isSystem:false, ...extra }]);
-    setNewName(""); setNewYomi("");
+    setNewName(""); setNewYomi(""); setNewUsage([TAG_USAGE.ACCOUNTING]);
     showToast("追加しました");
   };
 
@@ -1776,25 +1845,40 @@ function TagsView({ tags, setTags, items, setItems, showToast }) {
   const executeRemoveTag = () => {
     const tag = confirmDeleteTag;
     if (!tag) return;
+    // Ver2.8.1⑰：タグ削除は「名前札」の削除のみ。参照している元データ（items等）は削除せず、
+    // タグ参照だけを外す（items側は既存どおりtags配列からIDを取り除くのみで、item自体は残る）。
     setTags(prev => prev.filter(t => t.id !== tag.id));
     setItems(prev => prev.map(it => ({ ...it, tags:(it.tags||[]).filter(tid => tid!==tag.id) })));
     setConfirmDeleteTag(null);
     showToast("削除しました");
   };
 
-  const startEdit = (tag) => { setEditingId(tag.id); setEditName(tag.name); setEditYomi(tag.yomi||""); };
+  const startEdit = (tag) => { setEditingId(tag.id); setEditName(tag.name); setEditYomi(tag.yomi||""); setEditUsage(tag.usage||[]); };
   const saveEdit = () => {
     const name = editName.trim();
     if (!name) return;
     if (tags.some(t => t.name===name && t.id!==editingId)) { showToast("同名のタグが既にあります"); return; }
-    setTags(prev => prev.map(t => t.id===editingId ? { ...t, name, ...(t.kind==="tag" ? { yomi: editYomi.trim() } : {}) } : t));
+    // Ver2.8.1⑯：タグ名はIDを介して参照されるため、ここで名前を変えるだけで、そのタグを参照している
+    // 既存データ（items・タイムラインの日タグ等）の表示も自動的に新しい名前へ追従する（文字列コピー保存ではないため）。
+    setTags(prev => prev.map(t => t.id===editingId ? { ...t, name, ...(t.kind==="tag" ? { yomi: editYomi.trim(), usage: editUsage } : {}) } : t));
     setEditingId(null);
   };
 
   const toggleField = (tag, field) => setTags(prev => prev.map(t => t.id===tag.id ? { ...t, [field]: !t[field] } : t));
 
+  const UsageCheckboxes = ({ value, onChange }) => (
+    <div style={{ display:"flex", gap:12, marginBottom:9, flexWrap:"wrap" }}>
+      {TAG_USAGE_LIST.map(u => (
+        <label key={u.key} style={{ display:"flex", alignItems:"center", gap:5, fontSize:fontRem(12.5), color:C.textSecondary }}>
+          <input type="checkbox" checked={value.includes(u.key)} onChange={()=>toggleUsageIn(onChange, u.key)} />
+          {u.label}（{tagUsageSymbol(u.key, tagUsageSymbols)}）
+        </label>
+      ))}
+    </div>
+  );
+
   const Row = ({ tag }) => {
-    const usage = items.filter(it => (it.tags||[]).includes(tag.id)).length;
+    const usageCount = items.filter(it => (it.tags||[]).includes(tag.id)).length;
     const editing = editingId === tag.id;
     if (editing) {
       return (
@@ -1802,8 +1886,12 @@ function TagsView({ tags, setTags, items, setItems, showToast }) {
           <input value={editName} onChange={e=>setEditName(e.target.value)} placeholder="タグ名"
             style={{ width:"100%", padding:"8px 10px", borderRadius:8, border:`1px solid ${C.border}`, fontSize:fontRem(13.5), marginBottom:6 }} />
           {tag.kind === "tag" && (
-            <input value={editYomi} onChange={e=>setEditYomi(e.target.value)} placeholder="読み（ひらがな）"
-              style={{ width:"100%", padding:"8px 10px", borderRadius:8, border:`1px solid ${C.border}`, fontSize:fontRem(13.5), marginBottom:6 }} />
+            <>
+              <input value={editYomi} onChange={e=>setEditYomi(e.target.value)} placeholder="読み（ひらがな）"
+                style={{ width:"100%", padding:"8px 10px", borderRadius:8, border:`1px solid ${C.border}`, fontSize:fontRem(13.5), marginBottom:8 }} />
+              <div style={{ fontSize:fontRem(10.5), color:C.textFaint, marginBottom:5 }}>使用先</div>
+              <UsageCheckboxes value={editUsage} onChange={setEditUsage} />
+            </>
           )}
           <div style={{ display:"flex", gap:8 }}>
             <button onClick={()=>setEditingId(null)} style={{ flex:1, padding:"8px 0", borderRadius:8, border:`1px solid ${C.border}`, background:"#fff", fontSize:fontRem(12.5), cursor:"pointer" }}>キャンセル</button>
@@ -1817,12 +1905,15 @@ function TagsView({ tags, setTags, items, setItems, showToast }) {
         <div style={{ minWidth:0 }}>
           <div style={{ display:"flex", alignItems:"center", gap:6, flexWrap:"wrap" }}>
             {tag.kind==="tag" && <span style={{ fontSize:fontRem(12) }}>{tagIcon(tag)}</span>}
-            <span style={{ fontSize:fontRem(14), fontWeight:600, color:C.textPrimary }}>{tag.kind==="tag" ? householdTagLabel(tag.name) : tag.name}</span>
+            <span style={{ fontSize:fontRem(14), fontWeight:600, color:C.textPrimary }}>
+              {tag.kind==="tag" ? householdTagLabel(tag.name) : tag.name}
+              {tag.kind==="tag" && <span style={{ color:C.textFaint, fontWeight:700 }}> {tagUsageBadge(tag, tagUsageSymbols)}</span>}
+            </span>
             {tag.isSystem && <span style={{ fontSize:fontRem(9.5), fontWeight:700, color:C.textFaint, border:`1px solid ${C.border}`, borderRadius:99, padding:"1px 6px" }}>システム</span>}
             {tag.excludeFromTotal && <span style={{ fontSize:fontRem(9.5), fontWeight:700, color:C.danger, background:C.dangerBg, borderRadius:99, padding:"1px 6px" }}>集計除外</span>}
             {tag.disabled && <span style={{ fontSize:fontRem(9.5), fontWeight:700, color:C.textFaint, background:"#F1EFEA", borderRadius:99, padding:"1px 6px" }}>無効</span>}
           </div>
-          <div style={{ fontSize:fontRem(11), color:C.textFaint, marginTop:2 }}>{tag.yomi ? `${tag.yomi}　・　` : ""}{usage}件で使用</div>
+          <div style={{ fontSize:fontRem(11), color:C.textFaint, marginTop:2 }}>{tag.yomi ? `${tag.yomi}　・　` : ""}{usageCount}件で使用</div>
         </div>
         <div style={{ display:"flex", gap:10, flexShrink:0 }}>
           <button onClick={() => startEdit(tag)} style={{ background:"none", border:"none", color:C.accentMidText, fontSize:fontRem(12), fontWeight:700, cursor:"pointer" }}>編集</button>
@@ -1837,6 +1928,7 @@ function TagsView({ tags, setTags, items, setItems, showToast }) {
 
   return (
     <div style={{ padding:"14px 14px 110px" }}>
+      <SectionHeader style={{ margin:"0 0 8px" }}>タグ・カテゴリ設定</SectionHeader>
       <div style={{ fontSize:fontRem(12), fontWeight:700, color:C.textSecondary, marginBottom:8 }}>新規追加</div>
       <div style={UI.cardFloat({ padding:12, marginBottom:22 })}>
         <input value={newName} onChange={e=>setNewName(e.target.value)} placeholder="タグ名"
@@ -1845,7 +1937,7 @@ function TagsView({ tags, setTags, items, setItems, showToast }) {
           <input value={newYomi} onChange={e=>setNewYomi(e.target.value)} placeholder="読み（ひらがな・並び順に使用）"
             style={{ width:"100%", padding:"9px 11px", borderRadius:9, border:`1px solid ${C.border}`, fontSize:fontRem(13.5), marginBottom:7, background:"#fff" }} />
         )}
-        <div style={{ display:"flex", gap:8 }}>
+        <div style={{ display:"flex", gap:8, marginBottom: newKind==="tag" ? 9 : 0 }}>
           <select value={newKind} onChange={e=>setNewKind(e.target.value)} style={{ flex:1, padding:"9px 8px", borderRadius:9, border:`1px solid ${C.border}`, fontSize:fontRem(13), background:"#fff" }}>
             <option value="tag">タグ</option>
             <option value="category">カテゴリ</option>
@@ -1855,8 +1947,14 @@ function TagsView({ tags, setTags, items, setItems, showToast }) {
               {TAG_GROUPS.filter(g => g.key !== "system").map(g => <option key={g.key} value={g.key}>{g.label}</option>)}
             </select>
           )}
-          <button onClick={addTag} style={{ background:C.accentDeep, color:"#fff", border:"none", borderRadius:9, padding:"0 16px", fontSize:fontRem(13.5), fontWeight:700, cursor:"pointer" }}>追加</button>
         </div>
+        {newKind === "tag" && (
+          <>
+            <div style={{ fontSize:fontRem(10.5), color:C.textFaint, marginBottom:5 }}>使用先</div>
+            <UsageCheckboxes value={newUsage} onChange={setNewUsage} />
+          </>
+        )}
+        <button onClick={addTag} style={{ width:"100%", background:C.accentDeep, color:"#fff", border:"none", borderRadius:9, padding:"10px 0", fontSize:fontRem(13.5), fontWeight:700, cursor:"pointer" }}>追加</button>
       </div>
 
       <div style={{ fontSize:fontRem(12), fontWeight:700, color:C.textSecondary, margin:"10px 0 8px" }}>カテゴリ（{categories.length}）</div>
@@ -1906,15 +2004,32 @@ function TagPicker({ tags, selectedIds, onConfirm, onClose, createTag }) {
 
   useEffect(() => { setTimeout(() => searchRef.current?.focus(), 260); }, []);
 
-  const plainTags = tags.filter(t => t.kind === "tag" && !t.disabled);
+  // Ver2.8.1⑲：タグピッカーは家計簿（items）向けのため、使用先が「家計簿」のタグのみを対象にする
+  // （タイムライン専用タグ等がここに紛れ込まないようにする）。
+  const plainTags = tags.filter(t => t.kind === "tag" && !t.disabled && (t.usage||[]).includes(TAG_USAGE.ACCOUNTING));
   const q = query.trim();
   const filtered = useMemo(() => plainTags.filter(t => !q || kanaIncludes(t.name, q) || kanaIncludes(t.yomi||"", q)), [plainTags, q]);
 
-  const toggle = (id) => setDraftSelected(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  // Ver2.8.1⑪：人物タグは「1レコードにつき1人物」。人物グループのタグを選ぶと、他の人物タグの
+  // 選択は自動的に外す（ラジオボタンのような挙動。イベント・フリータグは従来どおり複数選択可）。
+  // Ver2.8.1⑮：同一タグの重複付与を防ぐ（Setで管理しているため、そもそもトグルで重複しない）。
+  const toggle = (id) => setDraftSelected(prev => {
+    const tag = tags.find(t => t.id === id);
+    const n = new Set(prev);
+    if (tag && tag.group === "person") {
+      const personIds = new Set(tags.filter(t => t.group === "person").map(t => t.id));
+      const wasSelected = prev.has(id);
+      Array.from(n).forEach(existing => { if (personIds.has(existing)) n.delete(existing); });
+      if (!wasSelected) n.add(id);
+      return n;
+    }
+    n.has(id) ? n.delete(id) : n.add(id);
+    return n;
+  });
 
   const doCreate = () => {
     if (!newName.trim()) return;
-    const t = createTag(newName.trim(), "tag", { group:newGroup, yomi:newYomi.trim() });
+    const t = createTag(newName.trim(), "tag", { group:newGroup, yomi:newYomi.trim(), usage:[TAG_USAGE.ACCOUNTING] });
     if (t) setDraftSelected(prev => new Set([...prev, t.id]));
     setCreating(false); setNewName(""); setNewYomi("");
   };
@@ -3765,7 +3880,7 @@ function TimelineDayView({ title="Googleタイムライン研究", day, dayBucke
 // Ver2.7.2の「実データそのままの試験表示」に、次の表示ルールを追加した試験実装（最終仕様ではない）。
 //  ①空白日の補完（前日の最終滞在地に終日いたものとして表示）
 //  ②宿泊地判定（前日の最終滞在地＝当日最初の滞在地なら「宿泊」表示）／日付またぎ前後5分以内の
-//    短い移動の非表示（buildTrialDayRecords・isMidnightEdgeActivityに実装）
+//    短い移動の非表示（buildDayTimelineView・isMidnightEdgeActivityに実装）
 //  ⑤移動手段の読み替え（既存機能を「表示置き換え」ページに集約。ここでは引き続き読み替え表を参照）
 //  ⑥訪問図鑑の「ともた分類」を使った簡潔な表示（場所名・Google分類等の大量表示をやめ、
 //    絵文字＋ともた分類を中心にした表示を試験する）
@@ -3780,17 +3895,24 @@ function TimelineDayView({ title="Googleタイムライン研究", day, dayBucke
 //  ・ともた分類＋店名を一行にまとめ、文字のコントラストを改善（読みやすさ優先）
 //  ・「訪問図鑑へ」の独立リンクを廃止し、店名・場所名そのものをリンクにする
 //  ・場所詳細から戻ったとき、タイムライン（同じ日付）へ戻れるようにする（App側の配線で対応）
+// ── Ver2.8.1：タイムライン解釈の修正／タグの日単位化 ──
+//  ・複数日にまたがる長時間Visitを正しく各日へ展開して解釈する（buildDayTimelineViewを全面改訂。
+//    詳細は同関数のコメントを参照）。これにより、実際には滞在中の日が「記録なし」と誤表示されたり、
+//    朝一番の出発地点が消えたりする問題を解消した
+//  ・タイムラインタグは、場所ごと（Visitごと）ではなく「日単位」で付与するように変更した
+//    （各カードの「＋タグ」は廃止し、日付ナビゲーションの下に1か所だけタグ行を設置）
 // タイムライン格納庫の元データ・訪問図鑑の既存マスターデータは一切変更しない。
-function TimelineTrialView({ date, places, onClose, onOpenPlace }) {
+function TimelineTrialView({ date, places, tags, createTag, onClose, onOpenPlace }) {
   const [dayStore, setDayStore] = useState(null);
   const [loading, setLoading] = useState(true);
   const [currentDay, setCurrentDay] = useState(date);
-  const [tagEditorFor, setTagEditorFor] = useState(null); // { recordKey, current: string[] } | null
+  const [dayTagEditorOpen, setDayTagEditorOpen] = useState(false);
   const [filledListOpen, setFilledListOpen] = useState(false);
   const [tagsVersion, setTagsVersion] = useState(0); // タグ保存後の再描画トリガー
   const activityLabels = useMemo(() => loadLS(DISPLAY_MAP_LS_KEYS.activityLabels, {}), []);
   const categoryLabels = useMemo(() => loadLS(DISPLAY_MAP_LS_KEYS.categoryLabels, {}), []);
-  const timelineTagsMap = useMemo(() => loadTimelineTagsMap(), [tagsVersion]);
+  const tagUsageSymbols = useMemo(() => loadLS(DISPLAY_MAP_LS_KEYS.tagUsageSymbols, {}), []);
+  const timelineDayTagsMap = useMemo(() => loadTimelineDayTagsMap(), [tagsVersion]);
 
   useEffect(() => {
     let alive = true;
@@ -3804,9 +3926,19 @@ function TimelineTrialView({ date, places, onClose, onOpenPlace }) {
   const idx = dayKeys.indexOf(currentDay);
   const dayResult = useMemo(() => {
     if (!dayStore) return { status: "noData", records: [] };
-    return buildTrialDayRecords(currentDay, dayStore, places);
+    return buildDayTimelineView(currentDay, dayStore, places);
   }, [dayStore, currentDay, places]);
   const resolvePlace = (googlePlaceId) => places.find(p => (p.placeIds||[]).includes(googlePlaceId)) || null;
+
+  // Ver2.8.1⑧⑨⑯：タイムラインタグは日単位。タグマスター（tags）をID参照するため、ここでは
+  // IDから実際のタグオブジェクトを解決してから表示する（タグ名を変えれば自動的に反映される）。
+  const timelineUsageTags = useMemo(() => (tags||[]).filter(t => t.kind==="tag" && (t.usage||[]).includes(TAG_USAGE.TIMELINE)), [tags]);
+  const dayManualTagIds = getTimelineDayTagIds(currentDay, timelineDayTagsMap);
+  const dayManualTagObjs = dayManualTagIds.map(id => (tags||[]).find(t => t.id===id)).filter(Boolean);
+  const blankFillTag = (tags||[]).find(t => t.id === "tag_blankfill");
+  const dayAutoTagObjs = (dayResult.status === "filled" && blankFillTag) ? [blankFillTag] : [];
+  const dayAllTagObjs = [...dayAutoTagObjs, ...dayManualTagObjs];
+  const saveDayTagIds = (ids) => { saveTimelineDayTagIds(currentDay, ids); setDayTagEditorOpen(false); setTagsVersion(v => v + 1); };
 
   // ⑰⑱ともた分類＋店名を一行にまとめる。分類の読み替え（絵文字など）が設定されていればそれを先頭に、
   // 続けて店名（支店名があれば添える）を表示する。分類が未設定の場合は店名のみを表示する。
@@ -3818,25 +3950,20 @@ function TimelineTrialView({ date, places, onClose, onOpenPlace }) {
     return brandPart;
   };
 
-  const openTagEditor = (recordKey) => setTagEditorFor({ recordKey, current: getTimelineTagsFor(recordKey, timelineTagsMap) });
-  const saveTagEditor = (names) => {
-    if (!tagEditorFor) return;
-    saveTimelineTagsFor(tagEditorFor.recordKey, names);
-    setTagEditorFor(null);
-    setTagsVersion(v => v + 1);
-  };
-
-  const renderVisitCard = (r, key, { forceAllDay=false, autoTag=null } = {}) => {
+  const renderVisitCard = (r, key, { forceAllDay=false } = {}) => {
     const place = resolvePlace(r.googlePlaceId);
-    const isOvernight = !!r.isOvernightContinuation;
-    const timeLabel = forceAllDay ? "終日" : (
-      r.continuesToNextDay
-        ? `${fmtDateTime(r.startTime).split(" ")[1]} 〜 ${fmtDateTime(r.endTime)}`
-        : `${fmtDateTime(r.startTime).split(" ")[1]} 〜 ${fmtDateTime(r.endTime).split(" ")[1]}`
-    );
-    const recordKey = timelineRecordKey(currentDay, r);
-    const manualTags = getTimelineTagsFor(recordKey, timelineTagsMap);
-    const allTagChips = [...(autoTag ? [autoTag] : []), ...manualTags];
+    // Ver2.8.1①：isContinuationFromPrevDay／continuesToNextDayは、複数日にまたがる実データの
+    // Visitがgroupmentline日をまたいで展開された場合に付く「本物のフラグ」（groupTimelineByDay由来）。
+    // isOvernightContinuationは、別々のVisitレコードが日跨ぎの短い移動でつながっている場合の
+    // 推測フラグ（buildTimelineRangeView由来）。どちらも「🏠 宿泊」として同じ見せ方にする。
+    const isRealSpan = !!(r.isContinuationFromPrevDay || r.continuesToNextDay);
+    const showOvernightBadge = !!(r.isOvernightContinuation || r.isContinuationFromPrevDay);
+    let timeLabel;
+    if (forceAllDay) timeLabel = "終日";
+    else if (r.isContinuationFromPrevDay && r.continuesToNextDay) timeLabel = "終日（滞在中）";
+    else if (r.isContinuationFromPrevDay && !r.continuesToNextDay) timeLabel = `〜 ${fmtDateTime(r.endTime).split(" ")[1]}`;
+    else if (!r.isContinuationFromPrevDay && r.continuesToNextDay) timeLabel = `${fmtDateTime(r.startTime).split(" ")[1]} 〜（滞在中）`;
+    else timeLabel = `${fmtDateTime(r.startTime).split(" ")[1]} 〜 ${fmtDateTime(r.endTime).split(" ")[1]}`;
     return (
       <div key={key} style={{ display:"flex", gap:11 }}>
         <div style={{ width:2, background:C.accentMid, borderRadius:1 }} />
@@ -3845,8 +3972,11 @@ function TimelineTrialView({ date, places, onClose, onOpenPlace }) {
           border:`1px solid ${C.border}`, boxShadow:`0 2px 8px ${C.shadowCard}`,
         }}>
           <div>
-            {isOvernight && (
+            {showOvernightBadge && (
               <span style={{ display:"inline-block", fontSize:fontRem(10), fontWeight:700, color:C.accentDeep, background:C.accentLight, borderRadius:99, padding:"2px 9px", marginBottom:4 }}>🏠 宿泊</span>
+            )}
+            {!showOvernightBadge && r.continuesToNextDay && (
+              <span style={{ display:"inline-block", fontSize:fontRem(10), fontWeight:700, color:C.accentDeep, background:C.accentLight, borderRadius:99, padding:"2px 9px", marginBottom:4 }}>🏠 連泊中</span>
             )}
             {/* ⑲店名・場所名そのものをリンクにする（独立した「訪問図鑑へ」リンクは廃止） */}
             <div onClick={() => place && onOpenPlace(place.id)} style={{
@@ -3857,20 +3987,11 @@ function TimelineTrialView({ date, places, onClose, onOpenPlace }) {
               {place && <span style={{ fontSize:fontRem(12), fontWeight:700 }}>›</span>}
             </div>
             <div style={{ fontSize:fontRem(11), color:C.textSecondary, marginTop:3 }}>
-              {timeLabel}{!forceAllDay && <>　・　滞在 {durationLabel(r.startTime, r.endTime)}</>}
-              {r.continuesToNextDay && <span style={{ color:C.accentMidText, fontWeight:700 }}>　・　翌日へ続く</span>}
-            </div>
-            {/* ⑨タグは本文（店名）を邪魔しない位置＝ラベルの下、右寄せで小さく表示する */}
-            <div style={{ display:"flex", justifyContent:"flex-end", alignItems:"center", gap:5, marginTop:7, flexWrap:"wrap" }}>
-              {allTagChips.map((t, ti) => (
-                <span key={ti} style={{ fontSize:fontRem(10), fontWeight:700, color:C.accentMidText, background:C.accentLight, borderRadius:99, padding:"2px 8px" }}>
-                  {timelineTagLabel(t)}
-                </span>
-              ))}
-              <button onClick={() => recordKey && openTagEditor(recordKey)} style={{
-                fontSize:fontRem(10), fontWeight:700, color:C.textFaint, background:"none", border:`1px dashed ${C.border}`,
-                borderRadius:99, padding:"2px 8px", cursor:"pointer",
-              }}>＋タグ</button>
+              {timeLabel}
+              {/* Ver2.8.1①：複数日にまたがる滞在の合計時間は、当日単位のdurationLabelでは
+                  正しく表現できない（元のstart/endが複数日ぶんの合計のまま）ため、日をまたぐ
+                  カードでは「滞在○分」の表示を省略する（誤った時間表示を避けるため）。 */}
+              {!forceAllDay && !isRealSpan && <>　・　滞在 {durationLabel(r.startTime, r.endTime)}</>}
             </div>
           </div>
         </div>
@@ -3888,8 +4009,20 @@ function TimelineTrialView({ date, places, onClose, onOpenPlace }) {
         <button onClick={()=>idx<dayKeys.length-1 && setCurrentDay(dayKeys[idx+1])} disabled={idx>=dayKeys.length-1} style={{ background:"none", border:"none", fontSize:fontRem(14), color: idx>=dayKeys.length-1?C.textFaint:C.accentDeep, cursor: idx>=dayKeys.length-1?"default":"pointer", fontWeight:700 }}>翌日 ›</button>
       </div>
       <div style={{ flex:1, overflowY:"auto", padding:"18px 18px 112px" }}>
-        <div style={{ fontSize:fontRem(11), color:C.textFaint, background:C.card, border:`1px dashed ${C.border}`, borderRadius:11, padding:"11px 13px", marginBottom:18, lineHeight:1.6 }}>
-          「ともたろぐらしい」表示ルール（空白日の補完・宿泊地判定・タグ・ともた分類の簡潔表示）を試す試験展示です（格納庫のデータは変更していません）。情報量や見え方は、この確認を踏まえて次のバージョンで検討します。
+        <div style={{ fontSize:fontRem(11), color:C.textFaint, background:C.card, border:`1px dashed ${C.border}`, borderRadius:11, padding:"11px 13px", marginBottom:14, lineHeight:1.6 }}>
+          「ともたろぐらしい」表示ルール（長時間滞在の日またぎ解釈・宿泊地判定・タグ・ともた分類の簡潔表示）を試す試験展示です（格納庫のデータは変更していません）。情報量や見え方は、この確認を踏まえて次のバージョンで検討します。
+        </div>
+        {/* Ver2.8.1⑧：タイムラインタグは日単位。場所カードの下ではなく、ここ（日付の下）に1か所だけ表示する。 */}
+        <div style={{ display:"flex", alignItems:"center", flexWrap:"wrap", gap:6, marginBottom:18 }}>
+          {dayAllTagObjs.map((t) => (
+            <span key={t.id} style={{ fontSize:fontRem(11), fontWeight:700, color:C.accentMidText, background:C.accentLight, borderRadius:99, padding:"3px 10px" }}>
+              {tagLabelForUsage(t, TAG_USAGE.TIMELINE, tagUsageSymbols)}
+            </span>
+          ))}
+          <button onClick={() => setDayTagEditorOpen(true)} style={{
+            fontSize:fontRem(11), fontWeight:700, color:C.textFaint, background:"none", border:`1px dashed ${C.border}`,
+            borderRadius:99, padding:"3px 10px", cursor:"pointer",
+          }}>＋タグ</button>
         </div>
         {loading && <div style={{ fontSize:fontRem(12.5), color:C.textFaint, textAlign:"center", padding:"22px 0" }}>読み込み中…</div>}
         {!loading && dayResult.status === "noData" && (
@@ -3900,7 +4033,7 @@ function TimelineTrialView({ date, places, onClose, onOpenPlace }) {
         {!loading && dayResult.status === "empty" && (
           <div style={{ fontSize:fontRem(12.5), color:C.textFaint, textAlign:"center", padding:"22px 0" }}>この日の記録は0件です</div>
         )}
-        {!loading && dayResult.status === "filled" && dayResult.records.map((r, i) => renderVisitCard(r, i, { forceAllDay:true, autoTag:"空白日補完" }))}
+        {!loading && dayResult.status === "filled" && dayResult.records.map((r, i) => renderVisitCard(r, i, { forceAllDay:true }))}
         {!loading && dayResult.status === "data" && dayResult.records.map((r, i) => {
           if (r.kind === "activity") {
             return (
@@ -3917,12 +4050,14 @@ function TimelineTrialView({ date, places, onClose, onOpenPlace }) {
         })}
       </div>
 
-      {tagEditorFor && (
-        <TimelineTagEditorPanel
-          initialTags={tagEditorFor.current}
-          suggestions={collectAllTimelineTagWords(timelineTagsMap)}
-          onClose={() => setTagEditorFor(null)}
-          onSave={saveTagEditor}
+      {dayTagEditorOpen && (
+        <TimelineDayTagEditorPanel
+          selectedIds={dayManualTagIds}
+          availableTags={timelineUsageTags}
+          symbolMap={tagUsageSymbols}
+          onCreateTag={(name) => createTag(name, "tag", { group:"event", usage:[TAG_USAGE.TIMELINE] })}
+          onClose={() => setDayTagEditorOpen(false)}
+          onSave={saveDayTagIds}
         />
       )}
       {filledListOpen && (
@@ -3936,45 +4071,49 @@ function TimelineTrialView({ date, places, onClose, onOpenPlace }) {
 
 // Ver2.8.0②：タイムラインタグの簡易編集パネル。既存タグをチップで表示（タップで削除）し、
 // テキスト入力＋改行/カンマ区切りで新規タグを追加できる。保存時にのみlocalStorageへ書き込む。
-function TimelineTagEditorPanel({ initialTags, suggestions, onClose, onSave }) {
-  const [tags, setTags] = useState(initialTags || []);
-  const [text, setText] = useState("");
-  const addFromText = () => {
-    const parts = text.split(/[,、\n]/).map(s => s.trim()).filter(Boolean);
-    if (parts.length === 0) return;
-    setTags(prev => Array.from(new Set([...prev, ...parts])));
-    setText("");
+// Ver2.8.1⑨⑯：タイムラインタグの編集パネル。自由記述ではなく、タグマスター（使用先＝タイムライン）
+// から選ぶ方式に変更した。既存タグはチップのタップでON/OFF、新しいタグ名を入力すればその場で
+// タグマスターへ登録（使用先＝タイムライン、種別＝イベント扱い）してから選択状態にする。
+// 同一タグの重複付与はSetで管理しているため起こらない（依頼書⑮）。
+function TimelineDayTagEditorPanel({ selectedIds, availableTags, symbolMap, onCreateTag, onClose, onSave }) {
+  const [selected, setSelected] = useState(() => new Set(selectedIds || []));
+  const [localTags, setLocalTags] = useState(availableTags || []);
+  const [newName, setNewName] = useState("");
+  const toggle = (id) => setSelected(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const addNewTag = () => {
+    const name = newName.trim();
+    if (!name) return;
+    const created = onCreateTag(name);
+    if (!created) return; // 同名タグが既に存在する場合など（createTagがfalseを返す）
+    setLocalTags(prev => [...prev, created]);
+    setSelected(prev => new Set([...prev, created.id]));
+    setNewName("");
   };
-  const removeTag = (t) => setTags(prev => prev.filter(x => x !== t));
-  const unusedSuggestions = (suggestions||[]).filter(s => !tags.includes(s));
   return (
-    <SlideOverPanel title="タイムラインタグ" onClose={onClose} width="86%" maxWidth={380}
-      footer={<button onClick={()=>onSave(tags)} style={{ width:"100%", background:C.accentDeep, color:"#fff", border:"none", borderRadius:12, padding:"12px 0", fontSize:fontRem(14), fontWeight:700, cursor:"pointer" }}>保存</button>}>
-      <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginBottom:14 }}>
-        {tags.length === 0 && <span style={{ fontSize:fontRem(12), color:C.textFaint }}>まだタグがありません</span>}
-        {tags.map(t => (
-          <span key={t} onClick={() => removeTag(t)} style={{
-            fontSize:fontRem(12), fontWeight:700, color:C.accentMidText, background:C.accentLight, borderRadius:99,
-            padding:"5px 11px", cursor:"pointer", display:"inline-flex", alignItems:"center", gap:5,
-          }}>{timelineTagLabel(t)}<span style={{ color:C.textFaint }}>×</span></span>
-        ))}
+    <SlideOverPanel title="この日のタイムラインタグ" onClose={onClose} width="86%" maxWidth={380}
+      footer={<button onClick={()=>onSave(Array.from(selected))} style={{ width:"100%", background:C.accentDeep, color:"#fff", border:"none", borderRadius:12, padding:"12px 0", fontSize:fontRem(14), fontWeight:700, cursor:"pointer" }}>保存</button>}>
+      <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginBottom:16 }}>
+        {localTags.length === 0 && <span style={{ fontSize:fontRem(12), color:C.textFaint }}>タイムラインで使えるタグがまだありません</span>}
+        {localTags.map(t => {
+          const on = selected.has(t.id);
+          return (
+            <span key={t.id} onClick={() => toggle(t.id)} style={{
+              fontSize:fontRem(12), fontWeight:700, cursor:"pointer", borderRadius:99, padding:"5px 11px",
+              color: on ? C.accentMidText : C.textSecondary, background: on ? C.accentLight : "#fff",
+              border: on ? "none" : `1px solid ${C.border}`,
+            }}>{tagLabelForUsage(t, TAG_USAGE.TIMELINE, symbolMap)}</span>
+          );
+        })}
       </div>
-      <textarea value={text} onChange={e=>setText(e.target.value)} placeholder="タグ名を入力（カンマ・改行で複数追加可）例：北海道, 旅行"
-        style={{ width:"100%", minHeight:64, padding:"9px 11px", borderRadius:10, border:`1px solid ${C.border}`, fontSize:fontRem(13), marginBottom:8, background:"#fff", resize:"vertical" }} />
-      <button onClick={addFromText} style={{ width:"100%", padding:"9px 0", borderRadius:10, border:`1px solid ${C.border}`, background:"#fff", color:C.accentDeep, fontSize:fontRem(12.5), fontWeight:700, cursor:"pointer", marginBottom:16 }}>追加</button>
-      {unusedSuggestions.length > 0 && (
-        <>
-          <div style={{ fontSize:fontRem(11), color:C.textFaint, marginBottom:7 }}>これまでに使ったタグ</div>
-          <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
-            {unusedSuggestions.map(s => (
-              <span key={s} onClick={() => setTags(prev => [...prev, s])} style={{
-                fontSize:fontRem(11.5), fontWeight:700, color:C.textSecondary, background:"#fff", border:`1px solid ${C.border}`,
-                borderRadius:99, padding:"4px 10px", cursor:"pointer",
-              }}>{timelineTagLabel(s)}</span>
-            ))}
-          </div>
-        </>
-      )}
+      <div style={{ fontSize:fontRem(11), color:C.textFaint, marginBottom:7 }}>新しいタグを作る</div>
+      <div style={{ display:"flex", gap:8 }}>
+        <input value={newName} onChange={e=>setNewName(e.target.value)} placeholder="例：北海道"
+          style={{ flex:1, padding:"9px 11px", borderRadius:10, border:`1px solid ${C.border}`, fontSize:fontRem(13), background:"#fff" }} />
+        <button onClick={addNewTag} style={{ padding:"0 16px", borderRadius:10, border:"none", background:C.accentDeep, color:"#fff", fontSize:fontRem(12.5), fontWeight:700, cursor:"pointer" }}>作成</button>
+      </div>
+      <div style={{ fontSize:fontRem(10.5), color:C.textFaint, marginTop:8, lineHeight:1.6 }}>
+        新しく作ったタグは「タグ・カテゴリ設定」（マスター管理）にも登録され、使用先・種別は後から変更できます。
+      </div>
     </SlideOverPanel>
   );
 }
@@ -3986,10 +4125,12 @@ function FilledDaysOverlay({ dayStore, places, archiveDayKeys, onClose, onJump }
   const filledDays = useMemo(() => {
     if (!dayStore || archiveDayKeys.length === 0) return [];
     const first = archiveDayKeys[0], last = archiveDayKeys[archiveDayKeys.length - 1];
-    const all = daysBetweenInclusive(first, last);
+    // Ver2.8.1：日ごとにbuildDayTimelineViewを繰り返し呼ぶと、各呼び出しが遡り期間（最大30日）を
+    // 毎回読み直すため非効率。ここではbuildTimelineRangeViewで範囲全体を1回のスイープで計算する。
+    const range = buildTimelineRangeView(dayStore, places, first, last);
     const results = [];
-    all.forEach(d => {
-      const res = buildTrialDayRecords(d, dayStore, places);
+    Object.keys(range).sort().forEach(d => {
+      const res = range[d];
       if (res.status === "filled") {
         const gp = res.records[0]?.googlePlaceId;
         const place = gp ? places.find(p => (p.placeIds||[]).includes(gp)) : null;
@@ -4974,6 +5115,7 @@ function DisplayMappingView({ places, showToast }) {
   const [loadingActivity, setLoadingActivity] = useState(true);
   const [activityLabels, setActivityLabels] = useState(() => loadLS(DISPLAY_MAP_LS_KEYS.activityLabels, {}));
   const [categoryLabels, setCategoryLabels] = useState(() => loadLS(DISPLAY_MAP_LS_KEYS.categoryLabels, {}));
+  const [tagUsageSymbols, setTagUsageSymbols] = useState(() => loadLS(DISPLAY_MAP_LS_KEYS.tagUsageSymbols, {}));
 
   useEffect(() => {
     let alive = true;
@@ -5030,6 +5172,16 @@ function DisplayMappingView({ places, showToast }) {
     });
   };
 
+  // Ver2.8.1㉑㉒：タグの使用先（タイムライン・家計簿・訪問図鑑）を示す記号は、タグ設定画面ではなく
+  // ここ（表示置き換え）で一元管理する。内部識別子（TIMELINE等）は変えず、記号だけを変更できる。
+  const updateTagUsageSymbol = (usageKey, value) => {
+    setTagUsageSymbols(prev => {
+      const next = { ...prev, [usageKey]: value };
+      saveLS(DISPLAY_MAP_LS_KEYS.tagUsageSymbols, next);
+      return next;
+    });
+  };
+
   return (
     <div style={{ padding:"14px 16px 110px" }}>
       <SectionHeader style={{ margin:"0 0 8px" }}>表示置き換え</SectionHeader>
@@ -5075,6 +5227,22 @@ function DisplayMappingView({ places, showToast }) {
             <span style={{ fontSize:fontRem(12), color:C.textFaint }}>→</span>
             <input value={categoryLabels[category] || ""} onChange={e=>updateCategoryLabel(category, e.target.value)}
               placeholder={`例：🏥 ${category}`}
+              style={{ flex:1, padding:"7px 10px", borderRadius:9, border:`1px solid ${C.border}`, fontSize:fontRem(12.5), background:"#fff" }} />
+          </div>
+        ))}
+      </div>
+
+      <div style={{ fontSize:fontRem(11), fontWeight:800, color:C.textFaint, letterSpacing:0.06, margin:"0 0 8px" }}>【タグ使用先】</div>
+      <div style={UI.cardFloat({ padding:"13px 16px", marginBottom:24 })}>
+        <div style={{ fontSize:fontRem(10.5), color:C.textFaint, marginBottom:11, lineHeight:1.6 }}>
+          タグがどこで使われているかを示す記号です。内部の使用先そのもの（タイムライン／家計簿／訪問図鑑）は変わらず、ここでは画面に出す記号だけを変更できます。タグ一覧では「北海道(#€)」のようにまとめて表示されます。
+        </div>
+        {TAG_USAGE_LIST.map(u => (
+          <div key={u.key} style={{ display:"flex", alignItems:"center", gap:9, marginBottom:8 }}>
+            <span style={{ fontSize:fontRem(11.5), color:C.textSecondary, flex:"0 0 auto", minWidth:72 }}>{u.label}</span>
+            <span style={{ fontSize:fontRem(12), color:C.textFaint }}>→</span>
+            <input value={tagUsageSymbols[u.key] || ""} onChange={e=>updateTagUsageSymbol(u.key, e.target.value)}
+              placeholder={DEFAULT_TAG_USAGE_SYMBOLS[u.key]}
               style={{ flex:1, padding:"7px 10px", borderRadius:9, border:`1px solid ${C.border}`, fontSize:fontRem(12.5), background:"#fff" }} />
           </div>
         ))}
@@ -5174,14 +5342,25 @@ function SettingsView({ items, receipts, tags, places, settings, setSettings, da
         </div>
       </div>
 
-      <div style={{ fontSize:fontRem(12), fontWeight:700, color:C.textSecondary, marginBottom:8 }}>場所マスター</div>
-      <div style={UI.cardFloat({ padding:"12px 14px", marginBottom:22, fontSize:fontRem(12.5), color:C.textSecondary })}>
-        店名・場所の登録や編集は、メニューの「訪問図鑑」から行えます。現在 {places.length} 件登録されています。
-      </div>
+      {/* Ver2.8.1㉘：「場所マスター」「支払方法」は、それぞれ訪問図鑑・［マスター管理］＞支払方法設定で
+          管理するため、設定画面からは整理した（単なる案内ポインターも含めて削除）。 */}
 
-      <div style={{ fontSize:fontRem(12), fontWeight:700, color:C.textSecondary, marginBottom:8 }}>支払方法</div>
-      <div style={UI.cardFloat({ padding:"12px 14px", marginBottom:22, fontSize:fontRem(12.5), color:C.textSecondary })}>
-        支払方法の登録や編集は、メニューの「マスター管理」→「支払方法設定」から行えます。現在 {settings.payMethods.length} 件登録されています。
+      {/* Ver2.8.1㉙：システムタグを一覧で確認できるようにする（既存の意味を新しく作らず、
+          現在のisSystem/excludeFromTotal/disabledの意味をそのまま案内するだけの読み取り専用表示）。 */}
+      <div style={{ fontSize:fontRem(12), fontWeight:700, color:C.textSecondary, marginBottom:8 }}>システムタグ</div>
+      <div style={UI.cardFloat({ padding:"12px 14px", marginBottom:22 })}>
+        <div style={{ fontSize:fontRem(11), color:C.textFaint, marginBottom:10, lineHeight:1.6 }}>
+          ともたろぐが内部的に使うタグです。名称・使用先の変更は「マスター管理＞タグ・カテゴリ設定」から行えます。
+        </div>
+        {tags.filter(t => t.isSystem).map(t => (
+          <div key={t.id} style={{ padding:"8px 0", borderTop:`1px solid ${C.border}` }}>
+            <div style={{ fontSize:fontRem(12.5), fontWeight:700, color:C.textPrimary }}>{householdTagLabel(t.name)}</div>
+            <div style={{ fontSize:fontRem(10.5), color:C.textFaint, marginTop:2 }}>
+              {t.excludeFromTotal ? "このタグが付いた記録は、家計簿の集計から除外されます。" : "取り込んだデータの確認用に使われます（データ構造・表示ルールの検討対象を見つけるためのタグです）。"}
+              {t.disabled ? "　現在は無効化されているため、新規には付与できません（既存の付与は残ります）。" : ""}
+            </div>
+          </div>
+        ))}
       </div>
 
       <div style={{ fontSize:fontRem(12), fontWeight:700, color:C.textSecondary, marginBottom:8 }}>バックアップ・復元</div>
@@ -5273,7 +5452,7 @@ function App() {
   const [receipts, setReceipts] = useState(() => migrated.receipts);
   const [tags, setTags] = useState(() => {
     const saved = loadLS(LS_KEYS.tags, null);
-    if (saved && saved.length) return saved;
+    if (saved && saved.length) return ensureBlankFillSystemTag(saved.map(migrateTagRecord));
     const init = DEFAULT_TAGS();
     saveLS(LS_KEYS.tags, init);
     return init;
@@ -5606,7 +5785,7 @@ function App() {
       )}
 
       {timelineDate && (
-        <TimelineTrialView date={timelineDate} places={places}
+        <TimelineTrialView date={timelineDate} places={places} tags={tags} createTag={createTag}
           onClose={() => setTimelineDate(null)}
           onOpenPlace={(placeId) => setPlaceDetailId(placeId)} />
       )}
