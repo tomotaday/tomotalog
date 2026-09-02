@@ -5846,5 +5846,54 @@ if ("serviceWorker" in navigator) {
   });
 }
 </script>
+<!-- TOMOTALOG_TIMELINE_DIAGNOSTIC_START -->
+<style>
+#ttDiagBtn{position:fixed;right:14px;bottom:calc(14px + env(safe-area-inset-bottom));z-index:2147483000;border:0;border-radius:999px;padding:10px 14px;background:#7b3f98;color:#fff;font:700 14px -apple-system,BlinkMacSystemFont,sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.18)}
+#ttDiagModal{position:fixed;inset:0;z-index:2147483001;background:rgba(0,0,0,.42);display:none;padding:18px;overflow:auto;font-family:-apple-system,BlinkMacSystemFont,sans-serif}
+#ttDiagPanel{max-width:760px;margin:30px auto;background:#fff;border-radius:16px;padding:18px;color:#333;box-shadow:0 10px 40px rgba(0,0,0,.25)}
+#ttDiagPanel h2{margin:0 0 8px;font-size:20px}.ttd-note{font-size:13px;color:#666;line-height:1.5;margin-bottom:12px}.ttd-close{float:right;border:0;background:#eee;border-radius:999px;padding:6px 10px}.ttd-run{border:0;background:#0B7A7D;color:#fff;border-radius:10px;padding:10px 14px;font-weight:700}.ttd-pre{white-space:pre-wrap;word-break:break-word;background:#f4f1ec;border-radius:10px;padding:12px;font:12px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;max-height:58vh;overflow:auto}
+</style>
+<button id="ttDiagBtn" type="button">🔎 Timeline診断</button>
+<div id="ttDiagModal"><div id="ttDiagPanel"><button class="ttd-close" id="ttDiagClose">閉じる</button><h2>🔎 ともたろぐ Timeline診断</h2><div class="ttd-note">本体と同じIndexedDBから読み取ります。読み取り専用で、dayStoreは変更しません。</div><button class="ttd-run" id="ttDiagRun">診断開始</button><div id="ttDiagOut" style="margin-top:12px"></div></div></div>
+<script>
+(()=>{
+  const DB='tomotalog2db', STORE='kv', KEY='placeArchive:dayStore', LOOKBACK=30;
+  const $=id=>document.getElementById(id);
+  $('ttDiagBtn').onclick=()=>{$('ttDiagModal').style.display='block'};
+  $('ttDiagClose').onclick=()=>{$('ttDiagModal').style.display='none'};
+  function openDB(){return new Promise((resolve,reject)=>{const r=indexedDB.open(DB,1);r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)})}
+  async function getStore(){const db=await openDB();return new Promise((resolve,reject)=>{if(!db.objectStoreNames.contains(STORE)){db.close();reject(new Error('IndexedDBに objectStore "kv" がありません。'));return}const tx=db.transaction(STORE,'readonly'),r=tx.objectStore(STORE).get(KEY);r.onsuccess=()=>{resolve(r.result?.value);db.close()};r.onerror=()=>{reject(r.error);db.close()}})}
+  const dateOnly=s=>(s||'').slice(0,10);
+  const add=(d,n)=>{const x=new Date(d+'T00:00:00');x.setDate(x.getDate()+n);return x.toISOString().slice(0,10)};
+  const days=(a,b)=>{const o=[];for(let d=a;d<=b;d=add(d,1))o.push(d);return o};
+  const current=b=>b?.entries?.find(e=>e?.status==='current')||null;
+  function parse(raw){return (raw||[]).map(rec=>{if(rec.visit)return{kind:'visit',startTime:rec.startTime,endTime:rec.endTime,googlePlaceId:rec.visit.topCandidate?.placeId||''};if(rec.activity)return{kind:'activity',startTime:rec.startTime,endTime:rec.endTime};return null}).filter(Boolean)}
+  function midnight(r){if(r.kind!=='activity')return false;const s=r.startTime||'',e=r.endTime||'';if(!s||!e||dateOnly(s)===dateOnly(e))return false;const a=new Date(s).getTime(),b=new Date(e).getTime();return Number.isFinite(a)&&Number.isFinite(b)&&(b-a)<=600000}
+  function group(rs){const out={};for(const r of rs){const sd=dateOnly(r.startTime);if(!sd)continue;if(r.kind==='visit'){const ed=dateOnly(r.endTime)||sd;for(const d of days(sd,ed))(out[d]??=[]).push({...r,displayDay:d})}else(out[sd]??=[]).push({...r,displayDay:sd})}for(const d of Object.keys(out))out[d].sort((a,b)=>(a.startTime||'').localeCompare(b.startTime||''));return out}
+  function collect(store,a,b){const all=[];for(const d of days(a,b)){const e=current(store?.[d]);if(e?.records)all.push(...e.records)}return all}
+  function esc(s){return String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))}
+  async function run(){
+    const out=$('ttDiagOut');out.innerHTML='<div class="ttd-note">IndexedDBを読み取り中…</div>';
+    try{
+      const store=await getStore();if(!store||typeof store!=='object')throw new Error('dayStoreが見つかりませんでした。');
+      const all=Object.keys(store).sort(), candidates=[], stageLoss=[], multi=[];let currentDays=0,rawDays=0,rawCount=0,parsedCount=0;
+      for(const day of all){
+        const bucket=store[day]||{}, entries=Array.isArray(bucket.entries)?bucket.entries:[], currents=entries.filter(e=>e?.status==='current');
+        if(currents.length)currentDays++;if(currents.length>1)multi.push({day,count:currents.length});
+        const cur=currents[0]||null, bucketRaw=Array.isArray(cur?.records)?cur.records:[];if(bucketRaw.length){rawDays++;rawCount+=bucketRaw.length}
+        const rawWindow=collect(store,add(day,-LOOKBACK),day), parsed=parse(rawWindow).filter(r=>!midnight(r)).sort((a,b)=>(a.startTime||'').localeCompare(b.startTime||'')), by=group(parsed), dayRecords=by[day]||[], prev=by[add(day,-1)]||[], prevLast=[...prev].reverse().find(r=>r.kind==='visit')||null, status=dayRecords.length?'data':(prevLast?'filled':(cur?'empty':'noData'));
+        parsedCount+=parsed.length;
+        if(bucketRaw.length&&dayRecords.length===0)stageLoss.push({day,bucketRaw:bucketRaw.length,windowRaw:rawWindow.length,parsed:parsed.length,groupedForDay:dayRecords.length,prevLastVisit:!!prevLast,status});
+        if(bucketRaw.length&&status==='filled')candidates.push({day,bucketRaw:bucketRaw.length,windowRaw:rawWindow.length,parsed:parsed.length,groupedForDay:dayRecords.length,prevDayRecords:prev.length,prevLastVisit:prevLast?{startTime:prevLast.startTime,endTime:prevLast.endTime,googlePlaceId:prevLast.googlePlaceId||''}:null,currentEntryId:cur?.id||'',currentEntryRecords:bucketRaw.slice(0,30).map(r=>({startTime:r.startTime,endTime:r.endTime,type:r.visit?'visit':r.activity?'activity':'other'}))});
+      }
+      const focus=candidates.find(x=>x.day==='2021-11-06');
+      out.innerHTML='<div class="ttd-note">診断完了。特に <b>2021-11-06</b> を重点表示します。</div><div class="ttd-pre">'+esc(JSON.stringify({summary:{dayStoreDays:all.length,currentDays,rawDays,rawCount,parsedCount,candidateCount:candidates.length},focus2021_11_06:focus||null,allCandidates:candidates,stageLoss,daysWithMultipleCurrent:multi},null,2))+'</div>';
+    }catch(e){out.innerHTML='<div class="ttd-pre">'+esc('name: '+(e?.name||'')+'\nmessage: '+(e?.message||e)+'\nstack: '+(e?.stack||''))+'</div>'}
+  }
+  $('ttDiagRun').onclick=run;
+})();
+</script>
+<!-- TOMOTALOG_TIMELINE_DIAGNOSTIC_END -->
+
 </body>
 </html>
