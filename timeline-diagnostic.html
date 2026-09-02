@@ -42,29 +42,48 @@
 </main>
 <script>
 const DB_NAME = "tomotalog2db";
-const DB_VERSION = 1;
 const STORE_NAME = "kv";
 const DAYSTORE_KEY = "placeArchive:dayStore";
 const LOOKBACK_DAYS = 30;
 
 function idbOpen(){
   return new Promise((resolve,reject)=>{
-    const req=indexedDB.open(DB_NAME,DB_VERSION);
-    req.onupgradeneeded=()=>{
-      if(!req.result.objectStoreNames.contains(STORE_NAME)) req.result.createObjectStore(STORE_NAME,{keyPath:"id"});
-    };
+    let req;
+    try{
+      req=indexedDB.open(DB_NAME);
+    }catch(err){
+      reject(err);
+      return;
+    }
     req.onsuccess=()=>resolve(req.result);
-    req.onerror=()=>reject(req.error);
+    req.onerror=()=>reject(req.error || new Error("IndexedDBを開けませんでした。"));
+    req.onblocked=()=>reject(new Error("IndexedDBが別の処理でブロックされています。"));
   });
 }
+
 function idbGet(key){
   return idbOpen().then(db=>new Promise((resolve,reject)=>{
-    const req=db.transaction(STORE_NAME,"readonly").objectStore(STORE_NAME).get(key);
-    req.onsuccess=()=>resolve(req.result ? req.result.value : undefined);
-    req.onerror=()=>reject(req.error);
-    req.transaction.oncomplete=()=>db.close();
+    let tx;
+    try{
+      if(!db.objectStoreNames.contains(STORE_NAME)){
+        db.close();
+        reject(new Error(`IndexedDBに objectStore「${STORE_NAME}」がありません。`));
+        return;
+      }
+      tx=db.transaction(STORE_NAME,"readonly");
+      const req=tx.objectStore(STORE_NAME).get(key);
+      req.onsuccess=()=>resolve(req.result ? req.result.value : undefined);
+      req.onerror=()=>reject(req.error || new Error("dayStoreの読み取りに失敗しました。"));
+      tx.oncomplete=()=>db.close();
+      tx.onerror=()=>reject(tx.error || new Error("IndexedDB transactionでエラーが発生しました。"));
+      tx.onabort=()=>reject(tx.error || new Error("IndexedDB transactionが中断されました。"));
+    }catch(err){
+      try{db.close();}catch(_){ }
+      reject(err);
+    }
   }));
 }
+
 function currentEntryOf(bucket){
   return bucket?.entries?.find(e=>e.status==="current") || null;
 }
@@ -88,23 +107,10 @@ function parseTimelineJSON(rawArray){
   return (rawArray||[]).map(rec=>{
     if(rec.visit){
       const loc=parseGeoString(rec.visit.topCandidate?.placeLocation);
-      return {
-        kind:"visit",
-        startTime:rec.startTime,
-        endTime:rec.endTime,
-        googlePlaceId:rec.visit.topCandidate?.placeId || "",
-        location:loc
-      };
+      return {kind:"visit",startTime:rec.startTime,endTime:rec.endTime,googlePlaceId:rec.visit.topCandidate?.placeId || "",location:loc};
     }
     if(rec.activity){
-      return {
-        kind:"activity",
-        startTime:rec.startTime,
-        endTime:rec.endTime,
-        activityType:rec.activity.topCandidate?.type || "",
-        distanceMeters:rec.activity.distanceMeters ?? null,
-        confidence:rec.activity.topCandidate?.probability ?? null
-      };
+      return {kind:"activity",startTime:rec.startTime,endTime:rec.endTime,activityType:rec.activity.topCandidate?.type || "",distanceMeters:rec.activity.distanceMeters ?? null,confidence:rec.activity.topCandidate?.probability ?? null};
     }
     return null;
   }).filter(Boolean);
@@ -127,12 +133,7 @@ function groupTimelineByDay(records){
     if(r.kind==="visit"){
       const endDay=dateOnly(r.endTime) || startDay;
       daysBetweenInclusive(startDay,endDay).forEach((day,i,arr)=>{
-        (byDay[day] ||= []).push({
-          ...r,
-          displayDay:day,
-          isContinuationFromPrevDay:i>0,
-          continuesToNextDay:i<arr.length-1
-        });
+        (byDay[day] ||= []).push({...r,displayDay:day,isContinuationFromPrevDay:i>0,continuesToNextDay:i<arr.length-1});
       });
     }else{
       (byDay[startDay] ||= []).push({...r,displayDay:startDay});
@@ -157,16 +158,13 @@ async function runDiagnosis(){
   output.innerHTML="";
   try{
     const dayStore=await idbGet(DAYSTORE_KEY);
-    if(!dayStore || typeof dayStore!=="object") throw new Error("dayStoreが見つかりませんでした。");
+    if(!dayStore || typeof dayStore!=="object") throw new Error("dayStoreが見つかりませんでした。ともたろぐ本体と同じ環境で開いているか確認してください。");
 
     const allDays=Object.keys(dayStore).sort();
     if(allDays.length===0) throw new Error("dayStoreに日付データがありません。");
 
-    const candidates=[];
-    const multiCurrent=[];
-    const stageLoss=[];
-    let currentDays=0, rawRecordDays=0, rawRecordCount=0;
-    let parsedRecordCount=0, groupedRecordCount=0;
+    const candidates=[], multiCurrent=[], stageLoss=[];
+    let currentDays=0, rawRecordDays=0, rawRecordCount=0, parsedRecordCount=0;
 
     for(const day of allDays){
       const bucket=dayStore[day] || {};
@@ -178,7 +176,6 @@ async function runDiagnosis(){
       const bucketRaw=Array.isArray(current?.records) ? current.records : [];
       if(bucketRaw.length>0){ rawRecordDays++; rawRecordCount+=bucketRaw.length; }
 
-      // buildTimelineRangeView() と同じく、当日より30日前から当日までを読む
       const windowStart=addDaysStr(day,-LOOKBACK_DAYS);
       const rawWindow=collectRawRecordsForWindow(dayStore,windowStart,day);
       const parsedAll=parseTimelineJSON(rawWindow).filter(r=>!isMidnightEdgeActivity(r)).sort((a,b)=>(a.startTime||"").localeCompare(b.startTime||""));
@@ -189,37 +186,19 @@ async function runDiagnosis(){
       const prevLastVisit=[...prevDayRecords].reverse().find(r=>r.kind==="visit") || null;
       const statusResult=dayRecords.length>0 ? "data" : (prevLastVisit ? "filled" : (current ? "empty" : "noData"));
 
-      parsedRecordCount += parsedAll.length;
-      groupedRecordCount += Object.values(byDay).reduce((n,arr)=>n+arr.length,0);
+      parsedRecordCount+=parsedAll.length;
 
-      const bucketHasRaw=bucketRaw.length>0;
-      if(bucketHasRaw && dayRecords.length===0){
+      if(bucketRaw.length>0 && dayRecords.length===0){
         stageLoss.push({day,bucketRaw:bucketRaw.length,windowRaw:rawWindow.length,parsed:parsedAll.length,groupedForDay:dayRecords.length,prevLastVisit:!!prevLastVisit,status:statusResult});
       }
-      if(bucketHasRaw && statusResult==="filled"){
-        candidates.push({
-          day,
-          bucketRaw:bucketRaw.length,
-          windowRaw:rawWindow.length,
-          parsed:parsedAll.length,
-          groupedForDay:dayRecords.length,
-          prevDayRecords:prevDayRecords.length,
-          prevLastVisit:prevLastVisit ? {startTime:prevLastVisit.startTime,endTime:prevLastVisit.endTime,googlePlaceId:prevLastVisit.googlePlaceId||""} : null,
-          currentEntryId:current?.id || "",
-          currentEntryRecords:bucketRaw.slice(0,20).map(r=>({startTime:r.startTime,endTime:r.endTime,type:r.visit?"visit":r.activity?"activity":"other"}))
-        });
+      if(bucketRaw.length>0 && statusResult==="filled"){
+        candidates.push({day,bucketRaw:bucketRaw.length,windowRaw:rawWindow.length,parsed:parsedAll.length,groupedForDay:dayRecords.length,prevDayRecords:prevDayRecords.length,prevLastVisit:prevLastVisit ? {startTime:prevLastVisit.startTime,endTime:prevLastVisit.endTime,googlePlaceId:prevLastVisit.googlePlaceId||""} : null,currentEntryId:current?.id || "",currentEntryRecords:bucketRaw.slice(0,20).map(r=>({startTime:r.startTime,endTime:r.endTime,type:r.visit?"visit":r.activity?"activity":"other"}))});
       }
     }
 
     const summary=document.createElement("div");
     summary.className="summary";
-    summary.innerHTML=`
-      <div class="card"><div class="num">${allDays.length}</div><div class="label">dayStore日数</div></div>
-      <div class="card"><div class="num">${currentDays}</div><div class="label">currentあり</div></div>
-      <div class="card"><div class="num">${rawRecordCount}</div><div class="label">current records総数</div></div>
-      <div class="card"><div class="num">${rawRecordDays}</div><div class="label">recordsありの日数</div></div>
-      <div class="card"><div class="num">${parsedRecordCount}</div><div class="label">診断中parsed総数</div></div>
-      <div class="card"><div class="num">${candidates.length}</div><div class="label">⚠️ 実データあり＋filled</div></div>`;
+    summary.innerHTML=`<div class="card"><div class="num">${allDays.length}</div><div class="label">dayStore日数</div></div><div class="card"><div class="num">${currentDays}</div><div class="label">currentあり</div></div><div class="card"><div class="num">${rawRecordCount}</div><div class="label">current records総数</div></div><div class="card"><div class="num">${rawRecordDays}</div><div class="label">recordsありの日数</div></div><div class="card"><div class="num">${parsedRecordCount}</div><div class="label">診断中parsed総数</div></div><div class="card"><div class="num">${candidates.length}</div><div class="label">⚠️ 実データあり＋filled</div></div>`;
     output.appendChild(summary);
 
     const result=document.createElement("section");
@@ -240,15 +219,15 @@ async function runDiagnosis(){
     }
 
     const method=document.createElement("section");
-    method.innerHTML=`<h2>診断の意味</h2><div class="small">
-      この診断は、Ver2.8.1の buildTimelineRangeView() が使う「30日前から当日までのcurrent records → parse → midnight-edge activity除外 → group → 当日records有無 → filled判定」という流れを、読み取り専用で追っています。<br><br>
-      特に重要なのは、<b>「current bucketにはrecordsがあるのに、group後の当日recordsが0で、前日の最終Visitがあるためfilledになる日」</b>です。ここに11/6と同じ構造の候補が出ます。
-    </div>`;
+    method.innerHTML=`<h2>診断の意味</h2><div class="small">この診断は、Ver2.8.1の buildTimelineRangeView() が使う「30日前から当日までのcurrent records → parse → midnight-edge activity除外 → group → 当日records有無 → filled判定」という流れを、読み取り専用で追っています。<br><br>特に重要なのは、<b>「current bucketにはrecordsがあるのに、group後の当日recordsが0で、前日の最終Visitがあるためfilledになる日」</b>です。ここに11/6と同じ構造の候補が出ます。</div>`;
     output.appendChild(method);
     status.innerHTML='<span class="ok">診断完了</span>';
   }catch(err){
     status.innerHTML='<span class="warn">診断失敗</span>';
-    output.innerHTML=`<section class="alert"><h2>エラー</h2><pre>${String(err?.stack || err)}</pre></section>`;
+    const name=err && err.name ? `\nname: ${err.name}` : "";
+    const message=err && err.message ? `\nmessage: ${err.message}` : "";
+    const stack=err && err.stack ? `\n\nstack:\n${err.stack}` : `\n\n${String(err)}`;
+    output.innerHTML=`<section class="alert"><h2>エラー</h2><pre>${name}${message}${stack}</pre></section>`;
   }
 }
 
