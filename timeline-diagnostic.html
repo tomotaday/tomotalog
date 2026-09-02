@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0B7A7D">
+<title>ともたろぐ Timeline診断</title>
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;background:#FAF7F2;color:#333;font-family:-apple-system,'Hiragino Kaku Gothic ProN','Hiragino Sans',Meiryo,sans-serif;padding:20px;line-height:1.55}
+  main{max-width:900px;margin:0 auto}
+  h1{font-size:22px;margin:0 0 8px}
+  .note{background:#fff;border:1px solid #ddd;border-radius:12px;padding:14px;margin:12px 0 18px}
+  button{font:inherit;border:0;border-radius:10px;padding:12px 18px;background:#0B7A7D;color:#fff;font-weight:700}
+  button:disabled{opacity:.5}
+  .summary{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:16px 0}
+  .card{background:#fff;border:1px solid #ddd;border-radius:12px;padding:12px}
+  .num{font-size:22px;font-weight:700}
+  .label{font-size:12px;color:#666}
+  section{background:#fff;border:1px solid #ddd;border-radius:12px;margin:12px 0;padding:14px}
+  section.alert{border-color:#c33}
+  h2{font-size:17px;margin:0 0 10px}
+  pre{white-space:pre-wrap;word-break:break-word;background:#f3f1ed;border-radius:8px;padding:12px;font-size:12px;overflow:auto}
+  .ok{color:#276749;font-weight:700}
+  .warn{color:#b42318;font-weight:700}
+  .small{font-size:12px;color:#666}
+  @media(max-width:600px){body{padding:12px}.summary{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<main>
+<h1>🔎 ともたろぐ Timeline診断</h1>
+<div class="note">
+  <b>目的</b><br>
+  Timeline格納庫の現在の dayStore を読み取り、既存のVer2.8.1の表示判定と同じ流れを診断します。<br>
+  <b>読み取り専用</b>です。dayStoreや他のデータを書き換えません。
+</div>
+<button id="run">診断開始</button>
+<div id="status" class="small" style="margin-top:10px"></div>
+<div id="output"></div>
+</main>
+<script>
+const DB_NAME = "tomotalog2db";
+const DB_VERSION = 1;
+const STORE_NAME = "kv";
+const DAYSTORE_KEY = "placeArchive:dayStore";
+const LOOKBACK_DAYS = 30;
+
+function idbOpen(){
+  return new Promise((resolve,reject)=>{
+    const req=indexedDB.open(DB_NAME,DB_VERSION);
+    req.onupgradeneeded=()=>{
+      if(!req.result.objectStoreNames.contains(STORE_NAME)) req.result.createObjectStore(STORE_NAME,{keyPath:"id"});
+    };
+    req.onsuccess=()=>resolve(req.result);
+    req.onerror=()=>reject(req.error);
+  });
+}
+function idbGet(key){
+  return idbOpen().then(db=>new Promise((resolve,reject)=>{
+    const req=db.transaction(STORE_NAME,"readonly").objectStore(STORE_NAME).get(key);
+    req.onsuccess=()=>resolve(req.result ? req.result.value : undefined);
+    req.onerror=()=>reject(req.error);
+    req.transaction.oncomplete=()=>db.close();
+  }));
+}
+function currentEntryOf(bucket){
+  return bucket?.entries?.find(e=>e.status==="current") || null;
+}
+function dateOnly(iso){ return (iso || "").slice(0,10); }
+function addDaysStr(day,delta){
+  const d=new Date(day+"T00:00:00");
+  d.setDate(d.getDate()+delta);
+  return d.toISOString().slice(0,10);
+}
+function daysBetweenInclusive(fromDay,toDay){
+  const out=[]; let d=fromDay;
+  while(d<=toDay){ out.push(d); d=addDaysStr(d,1); }
+  return out;
+}
+function parseGeoString(g){
+  if(!g) return null;
+  const m=String(g).match(/([+-]?\d+(?:\.\d+)?),\s*([+-]?\d+(?:\.\d+)?)/);
+  return m ? {lat:Number(m[1]),lng:Number(m[2])} : null;
+}
+function parseTimelineJSON(rawArray){
+  return (rawArray||[]).map(rec=>{
+    if(rec.visit){
+      const loc=parseGeoString(rec.visit.topCandidate?.placeLocation);
+      return {
+        kind:"visit",
+        startTime:rec.startTime,
+        endTime:rec.endTime,
+        googlePlaceId:rec.visit.topCandidate?.placeId || "",
+        location:loc
+      };
+    }
+    if(rec.activity){
+      return {
+        kind:"activity",
+        startTime:rec.startTime,
+        endTime:rec.endTime,
+        activityType:rec.activity.topCandidate?.type || "",
+        distanceMeters:rec.activity.distanceMeters ?? null,
+        confidence:rec.activity.topCandidate?.probability ?? null
+      };
+    }
+    return null;
+  }).filter(Boolean);
+}
+function isMidnightEdgeActivity(r){
+  if(r?.kind!=="activity") return false;
+  const s=r.startTime||"", e=r.endTime||"";
+  if(!s || !e) return false;
+  const sd=dateOnly(s), ed=dateOnly(e);
+  if(sd===ed) return false;
+  const st=new Date(s).getTime(), et=new Date(e).getTime();
+  if(!Number.isFinite(st)||!Number.isFinite(et)) return false;
+  return (et-st)<=10*60*1000;
+}
+function groupTimelineByDay(records){
+  const byDay={};
+  (records||[]).forEach(r=>{
+    const startDay=dateOnly(r.startTime);
+    if(!startDay) return;
+    if(r.kind==="visit"){
+      const endDay=dateOnly(r.endTime) || startDay;
+      daysBetweenInclusive(startDay,endDay).forEach((day,i,arr)=>{
+        (byDay[day] ||= []).push({
+          ...r,
+          displayDay:day,
+          isContinuationFromPrevDay:i>0,
+          continuesToNextDay:i<arr.length-1
+        });
+      });
+    }else{
+      (byDay[startDay] ||= []).push({...r,displayDay:startDay});
+    }
+  });
+  Object.keys(byDay).forEach(day=>byDay[day].sort((a,b)=>(a.startTime||"").localeCompare(b.startTime||"")));
+  return byDay;
+}
+function collectRawRecordsForWindow(dayStore,fromDay,toDay){
+  const all=[];
+  daysBetweenInclusive(fromDay,toDay).forEach(d=>{
+    const entry=currentEntryOf(dayStore?.[d]);
+    if(entry?.records) all.push(...entry.records);
+  });
+  return all;
+}
+
+async function runDiagnosis(){
+  const status=document.getElementById("status");
+  const output=document.getElementById("output");
+  status.textContent="IndexedDBを読み込んでいます…";
+  output.innerHTML="";
+  try{
+    const dayStore=await idbGet(DAYSTORE_KEY);
+    if(!dayStore || typeof dayStore!=="object") throw new Error("dayStoreが見つかりませんでした。");
+
+    const allDays=Object.keys(dayStore).sort();
+    if(allDays.length===0) throw new Error("dayStoreに日付データがありません。");
+
+    const candidates=[];
+    const multiCurrent=[];
+    const stageLoss=[];
+    let currentDays=0, rawRecordDays=0, rawRecordCount=0;
+    let parsedRecordCount=0, groupedRecordCount=0;
+
+    for(const day of allDays){
+      const bucket=dayStore[day] || {};
+      const entries=Array.isArray(bucket.entries) ? bucket.entries : [];
+      const currents=entries.filter(e=>e?.status==="current");
+      if(currents.length>0) currentDays++;
+      if(currents.length>1) multiCurrent.push({day,count:currents.length});
+      const current=currents[0] || null;
+      const bucketRaw=Array.isArray(current?.records) ? current.records : [];
+      if(bucketRaw.length>0){ rawRecordDays++; rawRecordCount+=bucketRaw.length; }
+
+      // buildTimelineRangeView() と同じく、当日より30日前から当日までを読む
+      const windowStart=addDaysStr(day,-LOOKBACK_DAYS);
+      const rawWindow=collectRawRecordsForWindow(dayStore,windowStart,day);
+      const parsedAll=parseTimelineJSON(rawWindow).filter(r=>!isMidnightEdgeActivity(r)).sort((a,b)=>(a.startTime||"").localeCompare(b.startTime||""));
+      const byDay=groupTimelineByDay(parsedAll);
+      const dayRecords=byDay[day] || [];
+      const prevDay=addDaysStr(day,-1);
+      const prevDayRecords=byDay[prevDay] || [];
+      const prevLastVisit=[...prevDayRecords].reverse().find(r=>r.kind==="visit") || null;
+      const statusResult=dayRecords.length>0 ? "data" : (prevLastVisit ? "filled" : (current ? "empty" : "noData"));
+
+      parsedRecordCount += parsedAll.length;
+      groupedRecordCount += Object.values(byDay).reduce((n,arr)=>n+arr.length,0);
+
+      const bucketHasRaw=bucketRaw.length>0;
+      if(bucketHasRaw && dayRecords.length===0){
+        stageLoss.push({day,bucketRaw:bucketRaw.length,windowRaw:rawWindow.length,parsed:parsedAll.length,groupedForDay:dayRecords.length,prevLastVisit:!!prevLastVisit,status:statusResult});
+      }
+      if(bucketHasRaw && statusResult==="filled"){
+        candidates.push({
+          day,
+          bucketRaw:bucketRaw.length,
+          windowRaw:rawWindow.length,
+          parsed:parsedAll.length,
+          groupedForDay:dayRecords.length,
+          prevDayRecords:prevDayRecords.length,
+          prevLastVisit:prevLastVisit ? {startTime:prevLastVisit.startTime,endTime:prevLastVisit.endTime,googlePlaceId:prevLastVisit.googlePlaceId||""} : null,
+          currentEntryId:current?.id || "",
+          currentEntryRecords:bucketRaw.slice(0,20).map(r=>({startTime:r.startTime,endTime:r.endTime,type:r.visit?"visit":r.activity?"activity":"other"}))
+        });
+      }
+    }
+
+    const summary=document.createElement("div");
+    summary.className="summary";
+    summary.innerHTML=`
+      <div class="card"><div class="num">${allDays.length}</div><div class="label">dayStore日数</div></div>
+      <div class="card"><div class="num">${currentDays}</div><div class="label">currentあり</div></div>
+      <div class="card"><div class="num">${rawRecordCount}</div><div class="label">current records総数</div></div>
+      <div class="card"><div class="num">${rawRecordDays}</div><div class="label">recordsありの日数</div></div>
+      <div class="card"><div class="num">${parsedRecordCount}</div><div class="label">診断中parsed総数</div></div>
+      <div class="card"><div class="num">${candidates.length}</div><div class="label">⚠️ 実データあり＋filled</div></div>`;
+    output.appendChild(summary);
+
+    const result=document.createElement("section");
+    result.className=candidates.length ? "alert" : "";
+    result.innerHTML=`<h2>${candidates.length ? "⚠️ 要確認：実データありなのに filled" : "✅ 現時点で該当なし"}</h2><div class="small">本体データは変更していません。</div><pre>${JSON.stringify(candidates,null,2)}</pre>`;
+    output.appendChild(result);
+
+    if(stageLoss.length){
+      const s=document.createElement("section");
+      s.innerHTML=`<h2>途中段階で「当日表示」が消えた日</h2><pre>${JSON.stringify(stageLoss,null,2)}</pre>`;
+      output.appendChild(s);
+    }
+    if(multiCurrent.length){
+      const s=document.createElement("section");
+      s.className="alert";
+      s.innerHTML=`<h2>⚠️ currentエントリが複数ある日</h2><pre>${JSON.stringify(multiCurrent,null,2)}</pre>`;
+      output.appendChild(s);
+    }
+
+    const method=document.createElement("section");
+    method.innerHTML=`<h2>診断の意味</h2><div class="small">
+      この診断は、Ver2.8.1の buildTimelineRangeView() が使う「30日前から当日までのcurrent records → parse → midnight-edge activity除外 → group → 当日records有無 → filled判定」という流れを、読み取り専用で追っています。<br><br>
+      特に重要なのは、<b>「current bucketにはrecordsがあるのに、group後の当日recordsが0で、前日の最終Visitがあるためfilledになる日」</b>です。ここに11/6と同じ構造の候補が出ます。
+    </div>`;
+    output.appendChild(method);
+    status.innerHTML='<span class="ok">診断完了</span>';
+  }catch(err){
+    status.innerHTML='<span class="warn">診断失敗</span>';
+    output.innerHTML=`<section class="alert"><h2>エラー</h2><pre>${String(err?.stack || err)}</pre></section>`;
+  }
+}
+
+document.getElementById("run").addEventListener("click",runDiagnosis);
+</script>
+</body>
+</html>
