@@ -5286,7 +5286,82 @@ function inspectRawRecordSummary(rec) {
   };
 }
 
-function DataInspectorView({ onClose }) {
+// ══════════════════════════════════════════════════════════════
+// Ver2.8.2（調査機能拡張）：タイムライン判定経路の可視化。
+//
+// 「116事件」（2021-11-06がfilled＝空白日補完と判定される現象）の原因調査のため、保存データが
+// 下記のパイプラインをどう通過するかを、各段階の途中経過ごと観測できるようにする。
+//
+//   保存されたdayStore → currentEntryOf() → parseTimelineJSON() → groupTimelineByDay()
+//   → buildTimelineRangeView() → 最終status
+//
+// 【重要】この関数は、既存のタイムライン処理ロジック（currentEntryOf・parseTimelineJSON・
+// groupTimelineByDay・buildTimelineRangeView・isMidnightEdgeActivity・collectRawRecordsForWindow・
+// resolveArchiveIdentity）を一切変更せず、既存の関数をそのままの順序で「呼ぶだけ」で、各段階の
+// 戻り値を捕まえて返す。仕様変更・再実装は行っていない（呼び出し結果を観測するだけの診断関数）。
+// IndexedDBへの書き込みは一切行わない（読み取り専用）。
+function traceTimelineForDay(dayStore, places, day) {
+  // ① currentEntryOf()：保存されたdayStoreから、その日の「使われるcurrent entry」を取得する
+  //    既存関数をそのまま呼ぶ（仕様変更なし）。
+  const currentEntry = currentEntryOf(dayStore?.[day]);
+  const rawRecords = currentEntry?.records || [];
+
+  // ② parseTimelineJSON()：まず「その日単体のraw records」だけをそのままparseした結果を見る
+  //    （依頼の「raw records=?／parse後=?／visit=?／activity=?／unknown=?」に直接対応する）。
+  //    これは実際のパイプライン（③）とは別に、原因切り分けのために単体で試すものである。
+  const parsedDayOnly = parseTimelineJSON(rawRecords);
+  const kindCounts = { visit: 0, activity: 0, unknown: 0 };
+  parsedDayOnly.forEach(r => { kindCounts[r.kind] = (kindCounts[r.kind] || 0) + 1; });
+  // parseTimelineJSON()自体がすでに「visit/activity以外」をfilterして消している可能性があるため、
+  // 生のraw recordsそれぞれについて、点検口独自の非解釈判定（inspectRawRecordKind）でも
+  // kind内訳を数える（parseTimelineJSON()の判定と食い違うレコードが無いかを見るため）。
+  const rawKindCounts = { visit: 0, activity: 0, unknown: 0 };
+  rawRecords.forEach(r => { const k = inspectRawRecordKind(r); rawKindCounts[k] = (rawKindCounts[k]||0) + 1; });
+  // このうち、日またぎ短時間移動として除外される件数（実際のパイプラインではwindow側で適用される）
+  const midnightEdgeCountInDayOnly = parsedDayOnly.filter(r => isMidnightEdgeActivity(r)).length;
+
+  // ③〜⑤ 実際のパイプラインどおりに、遡り窓（TIMELINE_LOOKBACK_DAYS）を含めて
+  //    collectRawRecordsForWindow → parseTimelineJSON → isMidnightEdgeActivity除外 → groupTimelineByDay
+  //    を実行する（buildTimelineRangeView内部と全く同じ手順・同じ関数呼び出し）。
+  const windowStart = addDaysStr(day, -TIMELINE_LOOKBACK_DAYS);
+  const rawWindow = collectRawRecordsForWindow(dayStore, windowStart, day);
+  const parsedWindowAll = parseTimelineJSON(rawWindow);
+  const parsedWindow = parsedWindowAll
+    .filter(r => !isMidnightEdgeActivity(r))
+    .sort((a, b) => a.startTime.localeCompare(b.startTime));
+  const byDay = groupTimelineByDay(parsedWindow);
+  const groupedDayRecords = byDay[day] || [];
+  const prevDay = addDaysStr(day, -1);
+  const prevDayRecords = byDay[prevDay] || [];
+  const prevLastVisit = [...prevDayRecords].reverse().find(r => r.kind === "visit") || null;
+
+  // ⑥ buildTimelineRangeView()：最終的な判定結果（既存関数をそのまま呼ぶ・1日分だけの範囲で）
+  const rangeResult = buildTimelineRangeView(dayStore, places, day, day)[day];
+
+  // ⑦ filled判定になった場合の判定条件を、buildTimelineRangeView内部の分岐条件と同じ言葉で説明する
+  //    （条件式そのものを再実装するのではなく、実際に観測された値から「どの分岐を通ったか」を後付けで説明する）
+  let filledReason = null;
+  if (rangeResult?.status === "filled") {
+    filledReason = `group後の対象日records数が0件、かつ前日(${prevDay})の最終滞在Visitが存在する（${prevLastVisit ? "あり" : "—"}）ため、前日の最終滞在地を終日として補完`;
+  } else if (rangeResult?.status === "empty") {
+    filledReason = "group後の対象日records数が0件、前日の最終滞在Visitも無い（が、その日のcurrent entry自体は存在する）";
+  } else if (rangeResult?.status === "noData") {
+    filledReason = "group後の対象日records数が0件、前日の最終滞在Visitも無く、その日のcurrent entry自体も存在しない";
+  } else if (rangeResult?.status === "data") {
+    filledReason = "group後の対象日records数が1件以上あるため、そのまま実データとして表示（空白日補完は行われない）";
+  }
+
+  return {
+    day, currentEntry, rawRecords, rawRecordsCount: rawRecords.length, rawKindCounts,
+    parsedDayOnly, parsedDayOnlyCount: parsedDayOnly.length, kindCounts, midnightEdgeCountInDayOnly,
+    windowRawCount: rawWindow.length, windowParsedCount: parsedWindow.length,
+    groupedDayRecords, groupedDayRecordsCount: groupedDayRecords.length,
+    prevDay, prevDayGroupedCount: prevDayRecords.length, prevLastVisit,
+    finalStatus: rangeResult?.status ?? null, finalRecords: rangeResult?.records ?? [], filledReason,
+  };
+}
+
+function DataInspectorView({ onClose, places }) {
   const DB_NAME = "tomotalog2db";
   const STORE_NAME = "kv";
   const TARGET_KEY = ARCHIVE_IDB_KEYS.dayStore; // "placeArchive:dayStore"
@@ -5324,6 +5399,13 @@ function DataInspectorView({ onClose }) {
   // 返すため、複数のcurrent entryが存在する場合、どれが実際に使われているかをここで明示する。
   const pickedByCurrentEntryOf = bucket ? currentEntryOf(bucket) : null;
   const pickedIndex = pickedByCurrentEntryOf ? entries.indexOf(pickedByCurrentEntryOf) : -1;
+
+  // Ver2.8.2（調査機能拡張）：タイムライン判定経路の可視化。exists（dayStore読み込み済み）かつ
+  // 日付が選ばれている場合のみ計算する（読み取り専用・既存関数の呼び出しのみ）。
+  const trace = useMemo(() => {
+    if (!selectedDate || !exists) return null;
+    return traceTimelineForDay(dayStore, places || [], selectedDate);
+  }, [selectedDate, exists, dayStore, places]);
 
   const EntryBlock = ({ entry, index }) => {
     const records = entry?.records || [];
@@ -5469,6 +5551,89 @@ function DataInspectorView({ onClose }) {
 
                 <div style={{ fontSize:fontRem(11.5), fontWeight:700, color:C.textSecondary, margin:"14px 0 8px" }}>全entryの詳細（status:"current"を含むすべて）</div>
                 {entries.map((entry, i) => <EntryBlock key={i} entry={entry} index={i} />)}
+
+                {trace && (
+                  <>
+                    <SectionHeader style={{ margin:"22px 0 8px" }}>タイムライン判定経路の可視化</SectionHeader>
+                    <div style={{ fontSize:fontRem(10.5), color:C.textFaint, marginBottom:12, lineHeight:1.6 }}>
+                      保存されたdayStore → currentEntryOf() → parseTimelineJSON() → groupTimelineByDay() → buildTimelineRangeView() → 最終status　の各段階を、既存の関数をそのまま呼び出して観測しています（判定ロジックの変更・再実装は行っていません）。
+                    </div>
+                    <div style={UI.cardFloat({ padding:"13px 16px", marginBottom:14 })}>
+                      <div style={{ fontSize:fontRem(12.5), color:C.textPrimary, lineHeight:2.1 }}>
+                        <div>① currentEntryOf()が選んだentry：<b>{trace.currentEntry ? "あり" : "なし"}</b></div>
+                        <div>② 保存されているraw records数：<b>{trace.rawRecordsCount}</b></div>
+                        <div style={{ paddingLeft:14, fontSize:fontRem(11), color:C.textSecondary }}>　（独自判定内訳：visit {trace.rawKindCounts.visit} ／ activity {trace.rawKindCounts.activity} ／ unknown <b style={{ color: trace.rawKindCounts.unknown>0 ? C.danger : C.textSecondary }}>{trace.rawKindCounts.unknown}</b>）</div>
+                        <div>③ parseTimelineJSON()後のrecords数（この日単体）：<b style={{ color: trace.parsedDayOnlyCount !== trace.rawRecordsCount ? C.danger : C.textPrimary }}>{trace.parsedDayOnlyCount}</b></div>
+                        <div style={{ paddingLeft:14, fontSize:fontRem(11), color:C.textSecondary }}>　visit {trace.kindCounts.visit} ／ activity {trace.kindCounts.activity} ／ unknown {trace.kindCounts.unknown}</div>
+                        <div style={{ paddingLeft:14, fontSize:fontRem(11), color:C.textSecondary }}>　うち日またぎ短時間移動として除外される件数：{trace.midnightEdgeCountInDayOnly}</div>
+                        <div style={{ marginTop:6 }}>④ 遡り窓（{TIMELINE_LOOKBACK_DAYS}日分）：raw {trace.windowRawCount}件 → parse＋日またぎ除外後 {trace.windowParsedCount}件</div>
+                        <div>⑤ groupTimelineByDay()後、byDay["{selectedDate}"]のrecords数：<b style={{ color: trace.groupedDayRecordsCount === 0 && trace.parsedDayOnlyCount > 0 ? C.danger : C.textPrimary }}>{trace.groupedDayRecordsCount}</b></div>
+                        <div>⑥ 前日（{trace.prevDay}）のgroup後records数：<b>{trace.prevDayGroupedCount}</b>　／　prevLastVisit：<b>{trace.prevLastVisit ? `あり（googlePlaceId: ${trace.prevLastVisit.googlePlaceId || "—"}）` : "なし"}</b></div>
+                        <div style={{ marginTop:6 }}>⑦ buildTimelineRangeView()の最終status：<b style={{ fontSize:fontRem(15), color: trace.finalStatus==="filled" ? C.danger : C.accentDeep }}>{trace.finalStatus}</b></div>
+                      </div>
+                      {trace.filledReason && (
+                        <div style={{ marginTop:10, padding:"9px 11px", background: trace.finalStatus==="filled" ? "#FBEAEA" : C.accentLight, borderRadius:9, fontSize:fontRem(11), color: trace.finalStatus==="filled" ? C.danger : C.accentMidText, fontWeight:700, lineHeight:1.6 }}>
+                          ⑧ 判定条件：{trace.filledReason}
+                        </div>
+                      )}
+                    </div>
+
+                    {trace.parsedDayOnlyCount > 0 && (
+                      <>
+                        <div style={{ fontSize:fontRem(11), fontWeight:700, color:C.textSecondary, margin:"14px 0 8px" }}>③ parseTimelineJSON()後の内訳（この日単体・{trace.parsedDayOnlyCount}件）</div>
+                        <div style={UI.cardFloat({ padding:"12px 14px", marginBottom:14, overflowX:"auto" })}>
+                          <table style={{ borderCollapse:"collapse", width:"100%", fontSize:fontRem(10.5) }}>
+                            <thead><tr style={{ textAlign:"left", color:C.textFaint }}>
+                              <th style={{ padding:"3px 8px 3px 0" }}>#</th><th style={{ padding:"3px 8px" }}>kind</th>
+                              <th style={{ padding:"3px 8px" }}>startTime</th><th style={{ padding:"3px 8px" }}>endTime</th>
+                              <th style={{ padding:"3px 8px" }}>googlePlaceId</th>
+                            </tr></thead>
+                            <tbody>
+                              {trace.parsedDayOnly.map((r, ri) => (
+                                <tr key={ri} style={{ borderTop:`1px solid ${C.border}` }}>
+                                  <td style={{ padding:"3px 8px 3px 0", color:C.textFaint }}>{ri}</td>
+                                  <td style={{ padding:"3px 8px", fontWeight:700 }}>{r.kind}</td>
+                                  <td style={{ padding:"3px 8px", fontFamily:"monospace" }}>{r.startTime || "—"}</td>
+                                  <td style={{ padding:"3px 8px", fontFamily:"monospace" }}>{r.endTime || "—"}</td>
+                                  <td style={{ padding:"3px 8px", fontFamily:"monospace" }}>{r.googlePlaceId || "—"}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </>
+                    )}
+
+                    {trace.groupedDayRecordsCount > 0 && (
+                      <>
+                        <div style={{ fontSize:fontRem(11), fontWeight:700, color:C.textSecondary, margin:"14px 0 8px" }}>⑤ groupTimelineByDay()後 byDay["{selectedDate}"]の内訳（{trace.groupedDayRecordsCount}件）</div>
+                        <div style={UI.cardFloat({ padding:"12px 14px", marginBottom:14, overflowX:"auto" })}>
+                          <table style={{ borderCollapse:"collapse", width:"100%", fontSize:fontRem(10.5) }}>
+                            <thead><tr style={{ textAlign:"left", color:C.textFaint }}>
+                              <th style={{ padding:"3px 8px 3px 0" }}>#</th><th style={{ padding:"3px 8px" }}>kind</th>
+                              <th style={{ padding:"3px 8px" }}>startTime</th><th style={{ padding:"3px 8px" }}>endTime</th>
+                              <th style={{ padding:"3px 8px" }}>googlePlaceId</th><th style={{ padding:"3px 8px" }}>継続フラグ</th>
+                            </tr></thead>
+                            <tbody>
+                              {trace.groupedDayRecords.map((r, ri) => (
+                                <tr key={ri} style={{ borderTop:`1px solid ${C.border}` }}>
+                                  <td style={{ padding:"3px 8px 3px 0", color:C.textFaint }}>{ri}</td>
+                                  <td style={{ padding:"3px 8px", fontWeight:700 }}>{r.kind}</td>
+                                  <td style={{ padding:"3px 8px", fontFamily:"monospace" }}>{r.startTime || "—"}</td>
+                                  <td style={{ padding:"3px 8px", fontFamily:"monospace" }}>{r.endTime || "—"}</td>
+                                  <td style={{ padding:"3px 8px", fontFamily:"monospace" }}>{r.googlePlaceId || "—"}</td>
+                                  <td style={{ padding:"3px 8px", fontSize:fontRem(9.5), color:C.textFaint }}>
+                                    {r.isContinuationFromPrevDay ? "前日から" : ""}{r.continuesToNextDay ? " 翌日へ" : ""}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </>
+                    )}
+                  </>
+                )}
               </>
             )}
           </>
@@ -5647,7 +5812,7 @@ function SettingsView({ items, receipts, tags, places, settings, setSettings, da
       <div style={{ padding:"12px 16px 20px", fontSize:fontRem(12), color:C.textFaint, lineHeight:1.8, textAlign:"center" }}>
         生活を振り返るための、カレンダー型の生活ログ<br/>関数よりPivotが好きだった。
       </div>
-      {inspectorOpen && <DataInspectorView onClose={() => setInspectorOpen(false)} />}
+      {inspectorOpen && <DataInspectorView onClose={() => setInspectorOpen(false)} places={places} />}
     </div>
   );
 }
