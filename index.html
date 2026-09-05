@@ -5424,6 +5424,25 @@ function buildInvestigationComparisonRows(idbDayStore, screenDayStore, places, d
   });
 }
 
+// Ver2.8.2（調査機能追加・第2弾）：IndexedDB 2系統比較（timelineExperiment:dayStore ⇔ placeArchive:dayStore）。
+// 116事件の原因切り分け用に、同じDB(tomotalog2db)・同じObject Store(kv)にある2つの独立したdayStore
+// キーを、指定日について比較する。summarizeDayBucket()を両ストアに対して「呼ぶだけ」の集計専用関数
+// であり、判定ロジック（currentEntryOf・buildTimelineRangeView等）の再実装は行っていない。
+// 読み取り専用・書き込みなし・自動修正や同期は一切行わない（比較結果は表示するだけ）。
+function buildTwoStoreComparisonRows(storeA, storeB, dates) {
+  return dates.map(day => {
+    const a = summarizeDayBucket(storeA, day);
+    const b = summarizeDayBucket(storeB, day);
+    const bucketMatch = a.bucketExists === b.bucketExists;
+    const entriesMatch = a.entriesCount === b.entriesCount;
+    const currentMatch = a.currentCount === b.currentCount;
+    const idMatch = a.currentEntryId === b.currentEntryId;
+    const recordsMatch = a.currentEntryRecordsCount === b.currentEntryRecordsCount;
+    const allMatch = bucketMatch && entriesMatch && currentMatch && idMatch && recordsMatch;
+    return { day, a, b, bucketMatch, entriesMatch, currentMatch, idMatch, recordsMatch, allMatch };
+  });
+}
+
 function DataInspectorView({ onClose, places }) {
   const DB_NAME = "tomotalog2db";
   const STORE_NAME = "kv";
@@ -5448,6 +5467,20 @@ function DataInspectorView({ onClose, places }) {
     return () => { alive = false; };
   }, []);
 
+  // Ver2.8.2（調査機能追加・第2弾）：同じDB(tomotalog2db)・同じObject Store(kv)にある、もう一方の
+  // dayStore（timelineExperiment:dayStore＝タイムライン研究側）を読み取り専用で取得する。
+  // TARGET_KEY（placeArchive:dayStore＝正式格納庫側）とは完全に独立したキーで、既存のidbGet()を
+  // 呼ぶだけ。書き込み系（idbSet/idbDelete）は一切呼ばない。
+  const [timelineExpStore, setTimelineExpStore] = useState(null);
+  const [timelineExpLoadError, setTimelineExpLoadError] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    idbGet(TIMELINE_IDB_KEYS.dayStore)
+      .then(v => { if (alive) setTimelineExpStore(v); })
+      .catch(e => { if (alive) setTimelineExpLoadError(String(e?.message || e)); });
+    return () => { alive = false; };
+  }, []);
+
   const exists = dayStore !== null && dayStore !== undefined;
   const dayKeys = useMemo(() => exists ? Object.keys(dayStore).sort() : [], [dayStore, exists]);
   const dayCount = dayKeys.length;
@@ -5459,6 +5492,12 @@ function DataInspectorView({ onClose, places }) {
   // 調査対象日（2021-11-05〜07）についてのみ比較する（比較ロジック本体はbuildInvestigationComparisonRows）。
   const INVESTIGATION_DATES = ["2021-11-05", "2021-11-06", "2021-11-07"];
   const investigationRows = buildInvestigationComparisonRows(dayStore, screenSnapshot.value, places, INVESTIGATION_DATES);
+
+  // Ver2.8.2（調査機能追加・第2弾）：timelineExperiment:dayStore ⇔ placeArchive:dayStore（＝dayStore、
+  // TARGET_KEYで読み取り済み）を、同じINVESTIGATION_DATESについて比較する。比較ロジック本体は
+  // buildTwoStoreComparisonRows（summarizeDayBucketを呼ぶだけの純粋関数）。
+  const timelineExpExists = timelineExpStore !== null && timelineExpStore !== undefined;
+  const twoStoreRows = buildTwoStoreComparisonRows(timelineExpStore, dayStore, INVESTIGATION_DATES);
 
   const openDate = (d) => { setSelectedDate(d); setDateInput(d); setExpandedEntryKey(null); };
 
@@ -5612,6 +5651,61 @@ function DataInspectorView({ onClose, places }) {
                     </div>
                   </div>
                 )}
+              </div>
+            </div>
+          );
+        })}
+
+        <SectionHeader style={{ margin:"22px 0 8px" }}>IndexedDB 2系統比較</SectionHeader>
+        <div style={{ fontSize:fontRem(10.5), color:C.textFaint, marginBottom:12, lineHeight:1.6 }}>
+          同じDB（tomotalog2db）・同じObject Store（kv）にある2つの独立したキーを、それぞれidbGet()で
+          直接読み取って比較します（読み取り専用・自動修正や同期は行いません）。
+          <br/>【timelineExperiment:dayStore】＝タイムライン研究側　／　【placeArchive:dayStore】＝正式タイムライン格納庫側
+        </div>
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:12 }}>
+          <div style={UI.cardFloat({ padding:"11px 14px" })}>
+            <div style={{ fontSize:fontRem(10.5), fontWeight:700, color:C.textFaint, marginBottom:4 }}>【timelineExperiment:dayStore】</div>
+            <div style={{ fontSize:fontRem(11.5), color:C.textPrimary }}>存在：<b>{timelineExpExists ? "あり" : "なし（null）"}</b></div>
+            {timelineExpLoadError && <div style={{ fontSize:fontRem(10), color:C.danger, marginTop:4 }}>読取エラー：{timelineExpLoadError}</div>}
+          </div>
+          <div style={UI.cardFloat({ padding:"11px 14px" })}>
+            <div style={{ fontSize:fontRem(10.5), fontWeight:700, color:C.textFaint, marginBottom:4 }}>【placeArchive:dayStore】</div>
+            <div style={{ fontSize:fontRem(11.5), color:C.textPrimary }}>存在：<b>{exists ? "あり" : "なし（null）"}</b></div>
+            {loadError && <div style={{ fontSize:fontRem(10), color:C.danger, marginTop:4 }}>読取エラー：{loadError}</div>}
+          </div>
+        </div>
+        {twoStoreRows.map(row => {
+          const bgColor = row.allMatch ? "#EAF7EE" : "#FBEAEA";
+          const borderColor = row.allMatch ? "#8FC9A0" : C.danger;
+          return (
+            <div key={row.day} style={{ background:bgColor, border:`1px solid ${borderColor}`, borderRadius:13, padding:"12px 14px", marginBottom:10 }}>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
+                <div style={{ fontSize:fontRem(13), fontWeight:800, color:C.textPrimary, fontFamily:"monospace" }}>{row.day}</div>
+                <div style={{ fontSize:fontRem(10.5), fontWeight:800, color: row.allMatch ? "#2F8F4E" : C.danger }}>
+                  {row.allMatch ? "✅ 一致" : "⚠️ 不一致"}
+                </div>
+              </div>
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+                <div>
+                  <div style={{ fontSize:fontRem(10.5), fontWeight:700, color:C.textFaint, marginBottom:4 }}>【timelineExperiment】</div>
+                  <div style={{ fontSize:fontRem(11), color:C.textSecondary, lineHeight:1.8 }}>
+                    <div>bucket存在：<b style={{ color: row.bucketMatch ? "inherit" : C.danger }}>{row.a.bucketExists ? "あり" : "なし"}</b></div>
+                    <div>entries数：<b style={{ color: row.entriesMatch ? "inherit" : C.danger }}>{row.a.entriesCount}</b></div>
+                    <div>current数：<b style={{ color: row.currentMatch ? "inherit" : C.danger }}>{row.a.currentCount}</b></div>
+                    <div>currentEntryのID：<span style={{ fontFamily:"monospace", color: row.idMatch ? "inherit" : C.danger, fontWeight: row.idMatch ? 400 : 700 }}>{row.a.currentEntryId || "—"}</span></div>
+                    <div>records数：<b style={{ color: row.recordsMatch ? "inherit" : C.danger }}>{row.a.currentEntryRecordsCount ?? "—"}</b></div>
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize:fontRem(10.5), fontWeight:700, color:C.textFaint, marginBottom:4 }}>【placeArchive】</div>
+                  <div style={{ fontSize:fontRem(11), color:C.textSecondary, lineHeight:1.8 }}>
+                    <div>bucket存在：<b style={{ color: row.bucketMatch ? "inherit" : C.danger }}>{row.b.bucketExists ? "あり" : "なし"}</b></div>
+                    <div>entries数：<b style={{ color: row.entriesMatch ? "inherit" : C.danger }}>{row.b.entriesCount}</b></div>
+                    <div>current数：<b style={{ color: row.currentMatch ? "inherit" : C.danger }}>{row.b.currentCount}</b></div>
+                    <div>currentEntryのID：<span style={{ fontFamily:"monospace", color: row.idMatch ? "inherit" : C.danger, fontWeight: row.idMatch ? 400 : 700 }}>{row.b.currentEntryId || "—"}</span></div>
+                    <div>records数：<b style={{ color: row.recordsMatch ? "inherit" : C.danger }}>{row.b.currentEntryRecordsCount ?? "—"}</b></div>
+                  </div>
+                </div>
               </div>
             </div>
           );
