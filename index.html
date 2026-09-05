@@ -328,6 +328,27 @@ const ARCHIVE_IDB_KEYS = {
   importSummary: "placeArchive:importSummary", // 直近の全体JSON取込結果の集計
 };
 
+// ══════════════════════════════════════════════════════════════
+// Ver2.8.2（調査機能追加）：「画面側dayStore」観測用の診断スナップショット。
+//
+// 目的：IndexedDBに実際に保存されているdayStoreと、タイムライン表示側（TimelineTrialView）が
+// 実際に読み込んで使っているdayStoreが、同一状態かどうかを確認できるようにする。
+//
+// 【重要】これは純粋な観測用の副作用であり、判定ロジック・タイミング・表示内容には一切影響しない。
+// TimelineTrialViewが既存どおりidbGet()でdayStoreを読み込んだ「その結果を、判定に使うのとは別に
+// この変数へも控えておく」だけであり、分岐・計算・表示の仕方は何も変えていない。書き込み
+// （idbSet/idbDelete）は一切行わない。値はメモリ上の変数に保持するだけで、IndexedDB・localStorage
+// のいずれにも保存しない。
+let __screenDayStoreSnapshot = null;
+let __screenDayStoreSnapshotAt = null;
+function recordScreenDayStoreSnapshot(store) {
+  __screenDayStoreSnapshot = store;
+  __screenDayStoreSnapshotAt = Date.now();
+}
+function getScreenDayStoreSnapshot() {
+  return { value: __screenDayStoreSnapshot, loadedAt: __screenDayStoreSnapshotAt };
+}
+
 function parseGeoString(g) {
   const m = /geo:([-\d.]+),([-\d.]+)/.exec(g || "");
   return m ? { lat: Number(m[1]), lng: Number(m[2]) } : null;
@@ -3916,7 +3937,13 @@ function TimelineTrialView({ date, places, tags, createTag, onClose, onOpenPlace
 
   useEffect(() => {
     let alive = true;
-    idbGet(ARCHIVE_IDB_KEYS.dayStore).then(store => { if (alive) { setDayStore(store || {}); setLoading(false); } })
+    // Ver2.8.2（調査機能追加）：判定・表示に使うのとは別に、読み込んだdayStoreをそのまま
+    // 診断用スナップショットへも控える（recordScreenDayStoreSnapshot自体は観測用の副作用のみで、
+    // ここでのsetDayStore/setLoadingの呼び出し・分岐・タイミングは従来から一切変更していない）。
+    idbGet(ARCHIVE_IDB_KEYS.dayStore).then(store => {
+      recordScreenDayStoreSnapshot(store || {});
+      if (alive) { setDayStore(store || {}); setLoading(false); }
+    })
       .catch(() => { if (alive) { setDayStore({}); setLoading(false); } });
     return () => { alive = false; };
   }, []);
@@ -5361,6 +5388,42 @@ function traceTimelineForDay(dayStore, places, day) {
   };
 }
 
+// ══════════════════════════════════════════════════════════════
+// Ver2.8.2（調査機能追加）：IndexedDB直接読取 ⇔ 画面側dayStore 比較。
+//
+// dayStoreの内容（IndexedDB直接読取・画面側どちらでも共通の形式）から、
+// 「bucket存在／entries数／current数／currentEntryのID／currentEntryのrecords数」を要約する。
+// 判定ロジックは何も持たない、単なる集計専用の関数（既存のcurrentEntryOf()を呼ぶだけ）。
+function summarizeDayBucket(store, day) {
+  const b = store && typeof store === "object" ? store[day] : undefined;
+  const entriesArr = b?.entries || [];
+  const currents = entriesArr.filter(e => e?.status === "current");
+  const picked = currentEntryOf(b); // 既存関数をそのまま呼ぶだけ（変更なし）
+  return {
+    bucketExists: !!b,
+    entriesCount: entriesArr.length,
+    currentCount: currents.length,
+    currentEntryId: picked?.id ?? null,
+    currentEntryRecordsCount: picked ? (picked.records || []).length : null,
+  };
+}
+// IndexedDB直接読取（idbDayStore）と画面側dayStore（screenDayStore、無ければnull）を、指定した
+// 日付リストについて比較する。既存のbuildTimelineRangeView()をそれぞれのデータソースに対して
+// 呼ぶだけで、判定ロジックそのものは変更していない。読み取り専用・書き込みなし。
+function buildInvestigationComparisonRows(idbDayStore, screenDayStore, places, dates) {
+  const idbExists = idbDayStore !== null && idbDayStore !== undefined;
+  const hasScreenData = !!screenDayStore;
+  return dates.map(day => {
+    const idbSummary = summarizeDayBucket(idbDayStore, day);
+    const screenSummary = summarizeDayBucket(screenDayStore, day);
+    const idbStatus = idbExists ? (buildTimelineRangeView(idbDayStore, places || [], day, day)[day]?.status ?? null) : null;
+    const screenStatus = hasScreenData ? (buildTimelineRangeView(screenDayStore, places || [], day, day)[day]?.status ?? null) : null;
+    const idMatch = hasScreenData ? (idbSummary.currentEntryId === screenSummary.currentEntryId) : null;
+    const statusMatch = hasScreenData ? (idbStatus === screenStatus) : null;
+    return { day, idbSummary, screenSummary, idbStatus, screenStatus, idMatch, statusMatch, hasScreenData };
+  });
+}
+
 function DataInspectorView({ onClose, places }) {
   const DB_NAME = "tomotalog2db";
   const STORE_NAME = "kv";
@@ -5372,6 +5435,9 @@ function DataInspectorView({ onClose, places }) {
   const [dateInput, setDateInput] = useState("");
   const [selectedDate, setSelectedDate] = useState(null);
   const [expandedEntryKey, setExpandedEntryKey] = useState(null); // "entryIndex" の生JSON展開用
+  // Ver2.8.2（調査機能追加）：画面側（TimelineTrialView）が最後に読み込んだdayStoreのスナップショット。
+  // マウント時に1回だけ取得する（診断目的のみ。取得すること自体が判定・表示ロジックに影響することはない）。
+  const [screenSnapshot] = useState(() => getScreenDayStoreSnapshot());
 
   useEffect(() => {
     let alive = true;
@@ -5387,6 +5453,12 @@ function DataInspectorView({ onClose, places }) {
   const dayCount = dayKeys.length;
   const firstDate = dayKeys[0] || null;
   const lastDate = dayKeys[dayKeys.length - 1] || null;
+
+  // Ver2.8.2（調査機能追加）：IndexedDB直接読取（このコンポーネント自身のidbGet結果＝dayStore）と、
+  // 画面側dayStore（TimelineTrialViewが最後に読み込んだスナップショット＝screenSnapshot.value）を、
+  // 調査対象日（2021-11-05〜07）についてのみ比較する（比較ロジック本体はbuildInvestigationComparisonRows）。
+  const INVESTIGATION_DATES = ["2021-11-05", "2021-11-06", "2021-11-07"];
+  const investigationRows = buildInvestigationComparisonRows(dayStore, screenSnapshot.value, places, INVESTIGATION_DATES);
 
   const openDate = (d) => { setSelectedDate(d); setDateInput(d); setExpandedEntryKey(null); };
 
@@ -5493,7 +5565,59 @@ function DataInspectorView({ onClose, places }) {
           )}
         </div>
 
-        <SectionHeader style={{ margin:"0 0 8px" }}>日付指定による詳細確認</SectionHeader>
+        <SectionHeader style={{ margin:"0 0 8px" }}>IndexedDB直接読取 ⇔ 画面側dayStore 比較（調査対象日）</SectionHeader>
+        <div style={{ fontSize:fontRem(10.5), color:C.textFaint, marginBottom:12, lineHeight:1.6 }}>
+          「IndexedDB直接読取」はこの点検口自身がidbGet()で読み取った内容です。「画面側dayStore」は、
+          タイムライン画面（⏰タイムライン）を最後に開いたときに、その画面が実際に読み込んで使っていた
+          dayStoreのスナップショットです。両者が一致しているかを、調査対象日についてのみ確認します。
+          {!screenSnapshot.value && (
+            <><br/><b style={{ color:C.textFaint }}>※ この端末でまだ「⏰タイムライン」画面を開いていないため、画面側データはまだ取得できていません。一度タイムライン画面を開いてから、この点検口を開き直してください。</b></>
+          )}
+        </div>
+        {investigationRows.map(row => {
+          const bgColor = !row.hasScreenData ? C.card : (row.idMatch && row.statusMatch) ? "#EAF7EE" : "#FBEAEA";
+          const borderColor = !row.hasScreenData ? C.border : (row.idMatch && row.statusMatch) ? "#8FC9A0" : C.danger;
+          return (
+            <div key={row.day} style={{ background:bgColor, border:`1px solid ${borderColor}`, borderRadius:13, padding:"12px 14px", marginBottom:10 }}>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
+                <div style={{ fontSize:fontRem(13), fontWeight:800, color:C.textPrimary, fontFamily:"monospace" }}>{row.day}</div>
+                {row.hasScreenData && (
+                  <div style={{ fontSize:fontRem(10.5), fontWeight:800, color: (row.idMatch && row.statusMatch) ? "#2F8F4E" : C.danger }}>
+                    {(row.idMatch && row.statusMatch) ? "✅ 一致" : "⚠️ 不一致"}
+                  </div>
+                )}
+              </div>
+              <div style={{ display:"grid", gridTemplateColumns: row.hasScreenData ? "1fr 1fr" : "1fr", gap:12 }}>
+                <div>
+                  <div style={{ fontSize:fontRem(10.5), fontWeight:700, color:C.textFaint, marginBottom:4 }}>【IndexedDB直接読取】</div>
+                  <div style={{ fontSize:fontRem(11), color:C.textSecondary, lineHeight:1.8 }}>
+                    <div>bucket存在：<b>{row.idbSummary.bucketExists ? "あり" : "なし"}</b></div>
+                    <div>entries数：<b>{row.idbSummary.entriesCount}</b></div>
+                    <div>current数：<b>{row.idbSummary.currentCount}</b></div>
+                    <div>currentEntryのID：<span style={{ fontFamily:"monospace" }}>{row.idbSummary.currentEntryId || "—"}</span></div>
+                    <div>currentEntryのrecords数：<b>{row.idbSummary.currentEntryRecordsCount ?? "—"}</b></div>
+                    <div>判定status：<b style={{ color: row.idbStatus==="filled" ? C.danger : C.accentDeep }}>{row.idbStatus || "—"}</b></div>
+                  </div>
+                </div>
+                {row.hasScreenData && (
+                  <div>
+                    <div style={{ fontSize:fontRem(10.5), fontWeight:700, color:C.textFaint, marginBottom:4 }}>【画面側dayStore】</div>
+                    <div style={{ fontSize:fontRem(11), color:C.textSecondary, lineHeight:1.8 }}>
+                      <div>bucket存在：<b>{row.screenSummary.bucketExists ? "あり" : "なし"}</b></div>
+                      <div>entries数：<b>{row.screenSummary.entriesCount}</b></div>
+                      <div>current数：<b>{row.screenSummary.currentCount}</b></div>
+                      <div>currentEntryのID：<span style={{ fontFamily:"monospace", color: row.idMatch ? "inherit" : C.danger, fontWeight: row.idMatch ? 400 : 700 }}>{row.screenSummary.currentEntryId || "—"}</span></div>
+                      <div>currentEntryのrecords数：<b>{row.screenSummary.currentEntryRecordsCount ?? "—"}</b></div>
+                      <div>判定status：<b style={{ color: row.screenStatus==="filled" ? C.danger : C.accentDeep }}>{row.screenStatus || "—"}</b></div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+
+        <SectionHeader style={{ margin:"22px 0 8px" }}>日付指定による詳細確認</SectionHeader>
         <div style={UI.cardFloat({ padding:"13px 16px", marginBottom:16 })}>
           <div style={{ display:"flex", gap:8, marginBottom:10 }}>
             <input value={dateInput} onChange={e=>setDateInput(e.target.value)} placeholder="YYYY-MM-DD"
