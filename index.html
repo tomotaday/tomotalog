@@ -1277,7 +1277,9 @@ const MENU_SECTIONS = [
     { key:"about", label:"ともたろぐについて", icon:"ℹ️", tab:"settings" },
   ]},
   { label:"開発", items:[
-    { key:"devMode", label:"開発者モード", icon:"🛠️" },
+    { key:"timelineLab", label:"タイムライン研究室", icon:"📡" },
+    { key:"kakeiboLab", label:"家計簿研究室", icon:"📊", future:true },
+    { key:"dataInspector", label:"保存データ点検口", icon:"🔍" },
   ]},
 ];
 // 「セクション」構造は今回は折りたたみ機能なし（常に展開）。将来、開閉状態を持たせやすいよう
@@ -5862,6 +5864,290 @@ function DataInspectorView({ onClose, places }) {
 }
 
 
+// ══════════════════════════════════════════════════════════════
+// Ver2.8.2（調査機能追加・第4弾）：保存データ点検口／調査探索パネル。
+//
+// これまでのように「調査したい対象が見つかるたびに固定の点検口を増築する」のではなく、
+// 現在アプリ内に存在する調査対象（IndexedDBキー・localStorageキー・画面側が実際に保持している
+// データ）を自動的に一覧化し、選んで覗ける汎用パネルにしてある。
+//
+// 以下はすべて、既存の判定ロジック（currentEntryOf・buildTimelineRangeView・summarizeDayBucket・
+// buildTwoStoreComparisonRows等）を「呼ぶだけ」か、値の形を要約するだけの、新しい判定ロジックを
+// 持たない純粋関数・読み取り専用I/O関数。保存・更新・削除は一切行わない。
+// ══════════════════════════════════════════════════════════════
+
+// 値の形だけを要約する（中身そのものは含めない：存在するか／型／配列ならlength／
+// オブジェクトならトップレベルキー数のみ）。IndexedDB・localStorage・画面側スナップショット共通。
+function summarizeInventoryValue(value) {
+  if (value === undefined) return { exists: false, isNull: false, type: null, length: null, topLevelKeyCount: null };
+  if (value === null) return { exists: true, isNull: true, type: "null", length: null, topLevelKeyCount: null };
+  const type = Array.isArray(value) ? "array" : typeof value;
+  return {
+    exists: true, isNull: false, type,
+    length: type === "array" ? value.length : null,
+    topLevelKeyCount: type === "object" ? Object.keys(value).length : null,
+  };
+}
+
+// IndexedDB（tomotalog2db/kv）に現在存在するキーを、読み取り専用ですべて列挙する
+// （既存のidbOpen()を呼び、readonlyトランザクションでstore.getAll()するだけ。put/delete等の
+// 書き込みAPIは呼ばない）。固定のキー一覧を持たないため、将来キーが増えても、次にこの関数が
+// 呼ばれた時点で自動的に調査探索パネルの選択対象へ含まれる。
+async function idbInventoryAllKeys() {
+  const db = await idbOpen();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction("kv", "readonly");
+    const req = tx.objectStore("kv").getAll();
+    req.onsuccess = () => {
+      const rows = (req.result || []).map(rec => ({
+        id: rec.id, layer: "indexeddb", updatedAt: rec.updatedAt ?? null, ...summarizeInventoryValue(rec.value),
+      }));
+      resolve(rows);
+    };
+    req.onerror = () => reject(req.error);
+  });
+}
+
+// localStorageに現在存在するキーを、読み取り専用ですべて列挙する（Object.keys／getItemのみ。
+// setItem・removeItem・clearは一切呼ばない）。localStorageは文字列保存のため、JSON.parseを試み、
+// 失敗すれば生の文字列としてtype・構造情報だけを要約する。こちらも固定リストを持たず自動列挙。
+function summarizeLocalStorageValue(raw) {
+  if (raw === null) return { exists: false, isNull: false, type: null, length: null, topLevelKeyCount: null };
+  try { return summarizeInventoryValue(JSON.parse(raw)); }
+  catch (e) { return { exists: true, isNull: false, type: "string(raw)", length: raw.length, topLevelKeyCount: null }; }
+}
+function lsInventoryAllKeys() {
+  return Object.keys(localStorage).map(id => ({
+    id, layer: "localstorage", updatedAt: null, ...summarizeLocalStorageValue(localStorage.getItem(id)),
+  }));
+}
+
+// 「画面側データ」は、IndexedDB／localStorageと違って自動列挙ができない（各画面が自ら控えて
+// いない限り、外からは今その画面が何を保持しているか見えないため）。そこで、既存の
+// recordScreenDayStoreSnapshot()による観測結果を、この登録簿に1行足すだけで調査探索パネルの
+// 選択対象に加えられる形にしてある（Excelの表に新しい行を足す考え方）。
+// 現時点では、⏰タイムライン画面（TimelineTrialView）のdayStoreスナップショットの1件のみ。
+const SCREEN_SNAPSHOT_SOURCES = [
+  {
+    id: "screen:TimelineTrialView.dayStore",
+    label: "⏰タイムライン画面が実際に保持しているdayStore（React state）",
+    read: () => getScreenDayStoreSnapshot(),
+  },
+];
+function screenInventoryAllSources() {
+  return SCREEN_SNAPSHOT_SOURCES.map(src => ({
+    id: src.id, label: src.label, layer: "screen", updatedAt: null, ...summarizeInventoryValue(src.read()),
+  }));
+}
+
+// 選択された1件の調査対象について、値そのものを読み取り専用で改めて取得する
+// （idbGet／localStorage.getItem／登録簿のread()のいずれも読み取りのみ）。
+async function fetchSourceValue(source) {
+  if (source.layer === "indexeddb") return idbGet(source.id);
+  if (source.layer === "localstorage") {
+    const raw = localStorage.getItem(source.id);
+    if (raw === null) return null;
+    try { return JSON.parse(raw); } catch (e) { return raw; }
+  }
+  if (source.layer === "screen") {
+    const found = SCREEN_SNAPSHOT_SOURCES.find(s => s.id === source.id);
+    return found ? found.read() : undefined;
+  }
+  return undefined;
+}
+
+// 選んだ値が「日付キー→bucket」の形（dayStoreらしい形）かどうかの、表示分岐だけに使う見た目判定
+// （Timeline判定ロジックの再実装ではない。あくまでUIが日付詳細欄を出すかどうかを決めるだけ）。
+function looksLikeDayStore(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  return Object.keys(value).some(k => /^\d{4}-\d{2}-\d{2}$/.test(k));
+}
+
+const INVESTIGATION_QUICK_DATES = ["2021-11-05", "2021-11-06", "2021-11-07"]; // 116事件の対象日（クイック選択用。固定機能ではなく単なる入力補助）
+
+function SavedDataInspectorView({ onClose }) {
+  const [sources, setSources] = useState(null);
+  const [sourcesError, setSourcesError] = useState(null);
+
+  useEffect(() => {
+    let alive = true;
+    Promise.all([idbInventoryAllKeys(), Promise.resolve(lsInventoryAllKeys()), Promise.resolve(screenInventoryAllSources())])
+      .then(([idbRows, lsRows, screenRows]) => { if (alive) setSources([...idbRows, ...lsRows, ...screenRows]); })
+      .catch(e => { if (alive) setSourcesError(String(e?.message || e)); });
+    return () => { alive = false; };
+  }, []);
+
+  const [selectedIdA, setSelectedIdA] = useState("");
+  const [selectedIdB, setSelectedIdB] = useState("");
+  const [valueA, setValueA] = useState(undefined);
+  const [valueB, setValueB] = useState(undefined);
+  const [fetchError, setFetchError] = useState(null);
+  const [dateInput, setDateInput] = useState("2021-11-06");
+
+  const findSource = (id) => (sources || []).find(s => s.id === id);
+
+  // 選択が変わるたびに、選ばれた対象の値を読み取り専用で取得し直す（表示用に保持するのみ）。
+  useEffect(() => {
+    let alive = true;
+    setFetchError(null);
+    const source = findSource(selectedIdA);
+    if (!source) { setValueA(undefined); return; }
+    fetchSourceValue(source).then(v => { if (alive) setValueA(v); }).catch(e => { if (alive) setFetchError(String(e?.message || e)); });
+    return () => { alive = false; };
+  }, [selectedIdA, sources]);
+
+  useEffect(() => {
+    let alive = true;
+    const source = findSource(selectedIdB);
+    if (!source) { setValueB(undefined); return; }
+    fetchSourceValue(source).then(v => { if (alive) setValueB(v); }).catch(e => { if (alive) setFetchError(String(e?.message || e)); });
+    return () => { alive = false; };
+  }, [selectedIdB, sources]);
+
+  const layerLabel = { indexeddb: "📦 IndexedDB", localstorage: "🗂️ localStorage", screen: "🖥️ 画面側" };
+  const sourceA = findSource(selectedIdA);
+  const sourceB = findSource(selectedIdB);
+  const summaryA = valueA !== undefined ? summarizeInventoryValue(valueA) : null;
+  const summaryB = valueB !== undefined ? summarizeInventoryValue(valueB) : null;
+  const dayDetailA = (sourceA && looksLikeDayStore(valueA) && dateInput) ? summarizeDayBucket(valueA, dateInput) : null;
+  const dayDetailB = (sourceB && looksLikeDayStore(valueB) && dateInput) ? summarizeDayBucket(valueB, dateInput) : null;
+  const compareRow = (sourceA && sourceB && looksLikeDayStore(valueA) && looksLikeDayStore(valueB) && dateInput)
+    ? buildTwoStoreComparisonRows(valueA, valueB, [dateInput])[0]
+    : null;
+
+  const renderStructureLine = (summary) => {
+    if (!summary) return "—";
+    if (!summary.exists) return "キーなし（未取得）";
+    if (summary.isNull) return "null";
+    if (summary.type === "array") return `配列（length: ${summary.length}）`;
+    if (summary.type === "object") return `オブジェクト（トップレベルキー数: ${summary.topLevelKeyCount}）`;
+    return summary.type;
+  };
+
+  return (
+    <div style={{ paddingBottom:112 }}>
+      <SubHeader title="🔍 保存データ点検口（読み取り専用）" onBack={onClose} />
+      <div style={{ padding:"0 18px 18px" }}>
+        <div style={{ fontSize:fontRem(11), color:C.textFaint, background:C.card, border:`1px dashed ${C.border}`, borderRadius:11, padding:"11px 13px", marginBottom:18, lineHeight:1.7 }}>
+          IndexedDB（tomotalog2db/kv）・localStorage・画面側（React state）に現在存在するデータを
+          自動的に一覧化し、選んで覗ける調査室です。完全に読み取り専用で、保存・更新・削除・
+          再構築・自動修復は一切行いません。
+        </div>
+
+        {sourcesError && <div style={{ fontSize:fontRem(11), color:C.danger, marginBottom:14 }}>一覧取得エラー：{sourcesError}</div>}
+        {!sources && !sourcesError && <div style={{ fontSize:fontRem(11), color:C.textFaint, marginBottom:14 }}>調査対象を読み取り中…</div>}
+
+        {sources && (
+          <>
+            <div style={{ fontSize:fontRem(10.5), color:C.textFaint, marginBottom:10 }}>
+              現在の調査対象：{sources.length}件（IndexedDB {sources.filter(s=>s.layer==="indexeddb").length}件／
+              localStorage {sources.filter(s=>s.layer==="localstorage").length}件／
+              画面側 {sources.filter(s=>s.layer==="screen").length}件）
+            </div>
+
+            <div style={{ display:"flex", flexDirection:"column", gap:10, marginBottom:16 }}>
+              <label style={{ fontSize:fontRem(11), fontWeight:700, color:C.textSecondary }}>
+                調査対象A
+                <select value={selectedIdA} onChange={e=>setSelectedIdA(e.target.value)}
+                  style={{ display:"block", width:"100%", marginTop:6, padding:"9px 10px", borderRadius:10, border:`1px solid ${C.border}`, background:C.card, fontSize:fontRem(11.5) }}>
+                  <option value="">（選択してください）</option>
+                  {sources.map(s => (
+                    <option key={s.id} value={s.id}>{layerLabel[s.layer]}｜{s.label || s.id}{s.exists === false ? "（キーなし）" : ""}</option>
+                  ))}
+                </select>
+              </label>
+              <label style={{ fontSize:fontRem(11), fontWeight:700, color:C.textSecondary }}>
+                調査対象B（比較用・任意）
+                <select value={selectedIdB} onChange={e=>setSelectedIdB(e.target.value)}
+                  style={{ display:"block", width:"100%", marginTop:6, padding:"9px 10px", borderRadius:10, border:`1px solid ${C.border}`, background:C.card, fontSize:fontRem(11.5) }}>
+                  <option value="">（比較しない）</option>
+                  {sources.map(s => (
+                    <option key={s.id} value={s.id}>{layerLabel[s.layer]}｜{s.label || s.id}{s.exists === false ? "（キーなし）" : ""}</option>
+                  ))}
+                </select>
+              </label>
+              <label style={{ fontSize:fontRem(11), fontWeight:700, color:C.textSecondary }}>
+                確認したい日付（dayStore形式の対象を選んだ場合のみ使用）
+                <input type="text" value={dateInput} onChange={e=>setDateInput(e.target.value)} placeholder="YYYY-MM-DD"
+                  style={{ display:"block", width:"100%", marginTop:6, padding:"9px 10px", borderRadius:10, border:`1px solid ${C.border}`, fontSize:fontRem(11.5), fontFamily:"monospace" }} />
+                <div style={{ display:"flex", gap:6, marginTop:6 }}>
+                  {INVESTIGATION_QUICK_DATES.map(d => (
+                    <button key={d} type="button" onClick={()=>setDateInput(d)} style={{
+                      fontSize:fontRem(10), padding:"4px 9px", borderRadius:20, border:`1px solid ${C.border}`,
+                      background: dateInput===d ? C.accentMid : "transparent", color: dateInput===d ? "#fff" : C.textSecondary, cursor:"pointer",
+                    }}>{d}</button>
+                  ))}
+                </div>
+              </label>
+            </div>
+
+            {fetchError && <div style={{ fontSize:fontRem(11), color:C.danger, marginBottom:14 }}>取得エラー：{fetchError}</div>}
+
+            {sourceA && (
+              <div style={UI.cardFloat({ padding:"12px 14px", marginBottom:12 })}>
+                <div style={{ fontSize:fontRem(10.5), fontWeight:700, color:C.textFaint, marginBottom:4 }}>【A】{layerLabel[sourceA.layer]}｜<span style={{ fontFamily:"monospace" }}>{sourceA.id}</span></div>
+                <div style={{ fontSize:fontRem(11.5), color:C.textPrimary, marginBottom: dayDetailA ? 8 : 0 }}>{renderStructureLine(summaryA)}</div>
+                {dayDetailA && (
+                  <div style={{ fontSize:fontRem(11), color:C.textSecondary, lineHeight:1.8, borderTop:`1px solid ${C.border}`, paddingTop:8 }}>
+                    <div style={{ fontWeight:700, color:C.textFaint, marginBottom:2 }}>{dateInput} の内容</div>
+                    <div>bucket存在：<b>{dayDetailA.bucketExists ? "あり" : "なし"}</b></div>
+                    <div>entries数：<b>{dayDetailA.entriesCount}</b></div>
+                    <div>current数：<b>{dayDetailA.currentCount}</b></div>
+                    <div>currentEntryのID：<span style={{ fontFamily:"monospace" }}>{dayDetailA.currentEntryId || "—"}</span></div>
+                    <div>records数：<b>{dayDetailA.currentEntryRecordsCount ?? "—"}</b></div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {sourceB && (
+              <div style={UI.cardFloat({ padding:"12px 14px", marginBottom:12 })}>
+                <div style={{ fontSize:fontRem(10.5), fontWeight:700, color:C.textFaint, marginBottom:4 }}>【B】{layerLabel[sourceB.layer]}｜<span style={{ fontFamily:"monospace" }}>{sourceB.id}</span></div>
+                <div style={{ fontSize:fontRem(11.5), color:C.textPrimary, marginBottom: dayDetailB ? 8 : 0 }}>{renderStructureLine(summaryB)}</div>
+                {dayDetailB && (
+                  <div style={{ fontSize:fontRem(11), color:C.textSecondary, lineHeight:1.8, borderTop:`1px solid ${C.border}`, paddingTop:8 }}>
+                    <div style={{ fontWeight:700, color:C.textFaint, marginBottom:2 }}>{dateInput} の内容</div>
+                    <div>bucket存在：<b>{dayDetailB.bucketExists ? "あり" : "なし"}</b></div>
+                    <div>entries数：<b>{dayDetailB.entriesCount}</b></div>
+                    <div>current数：<b>{dayDetailB.currentCount}</b></div>
+                    <div>currentEntryのID：<span style={{ fontFamily:"monospace" }}>{dayDetailB.currentEntryId || "—"}</span></div>
+                    <div>records数：<b>{dayDetailB.currentEntryRecordsCount ?? "—"}</b></div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {compareRow && (
+              <div style={{
+                background: compareRow.allMatch ? "#EAF7EE" : "#FBEAEA", border:`1px solid ${compareRow.allMatch ? "#8FC9A0" : C.danger}`,
+                borderRadius:13, padding:"12px 14px", marginBottom:12,
+              }}>
+                <div style={{ fontSize:fontRem(10.5), fontWeight:800, color: compareRow.allMatch ? "#2F8F4E" : C.danger, marginBottom:6 }}>
+                  {dateInput}：A ⇔ B は {compareRow.allMatch ? "✅ 一致" : "⚠️ 不一致"}
+                </div>
+                <div style={{ fontSize:fontRem(10.5), color:C.textSecondary, lineHeight:1.8 }}>
+                  <div>bucket存在：{compareRow.bucketMatch ? "一致" : <b style={{ color:C.danger }}>不一致</b>}</div>
+                  <div>entries数：{compareRow.entriesMatch ? "一致" : <b style={{ color:C.danger }}>不一致</b>}</div>
+                  <div>current数：{compareRow.currentMatch ? "一致" : <b style={{ color:C.danger }}>不一致</b>}</div>
+                  <div>currentEntryのID：{compareRow.idMatch ? "一致" : <b style={{ color:C.danger }}>不一致</b>}</div>
+                  <div>records数：{compareRow.recordsMatch ? "一致" : <b style={{ color:C.danger }}>不一致</b>}</div>
+                </div>
+              </div>
+            )}
+
+            <div style={{ fontSize:fontRem(10), color:C.textFaint, marginTop:18, lineHeight:1.7 }}>
+              ※ IndexedDB・localStorageの一覧は、この画面を開くたびに現在の状態を読み取り直します
+              （固定リストではないため、将来キーが増えても自動的にここへ現れます）。画面側データは、
+              対象の画面（例：⏰タイムライン）を一度開いた後でないと「未取得」になります。
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+
 function SettingsView({ items, receipts, tags, places, settings, setSettings, dayNotes, applyRestoredData, showToast }) {
   const [lastBackupAt, setLastBackupAt] = useState(null);
   const [restoreStep, setRestoreStep] = useState(0); // 0=none 1=file選択済み確認 2=確認文字列入力
@@ -6185,6 +6471,7 @@ function App() {
   const [selectedDate, setSelectedDate] = useState(null);
   const [quickAddOpen, setQuickAddOpen] = useState(false);
   const [timelineLabOpen, setTimelineLabOpen] = useState(false);
+  const [dataInspectorOpen, setDataInspectorOpen] = useState(false); // Ver2.8.2 第4弾：保存データ点検口
   const [quickAddDate, setQuickAddDate] = useState(null);
   const [quickAddReceiptInfo, setQuickAddReceiptInfo] = useState(null); // 既存レシートへの追加用
   const [editingId, setEditingId] = useState(null);
@@ -6362,6 +6649,8 @@ function App() {
     if (item.key === "paySettings") { setTab("paySettings"); return; }
     if (item.key === "displayMapping") { setTab("displayMapping"); return; }
     if (item.key === "devMode") { setTab("devMode"); return; }
+    if (item.key === "timelineLab") { setTimelineLabOpen(true); return; }
+    if (item.key === "dataInspector") { setDataInspectorOpen(true); return; }
     if (item.tab) { setTab(item.tab); return; }
   };
 
@@ -6422,6 +6711,12 @@ function App() {
       {timelineLabOpen && (
         <div style={{ position:"fixed", inset:0, background:C.bg, zIndex:230, overflowY:"auto" }}>
           <TimelineLabScreen onClose={()=>setTimelineLabOpen(false)} showToast={showToast} />
+        </div>
+      )}
+
+      {dataInspectorOpen && (
+        <div style={{ position:"fixed", inset:0, background:C.bg, zIndex:230, overflowY:"auto" }}>
+          <SavedDataInspectorView onClose={()=>setDataInspectorOpen(false)} />
         </div>
       )}
 
